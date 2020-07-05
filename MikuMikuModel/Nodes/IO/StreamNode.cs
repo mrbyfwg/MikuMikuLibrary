@@ -9,12 +9,12 @@ namespace MikuMikuModel.Nodes.IO
         public override NodeFlags Flags =>
             NodeFlags.Export | NodeFlags.Move | NodeFlags.Remove | NodeFlags.Rename | NodeFlags.Replace;
 
-        public override Bitmap Image =>
+        public override Bitmap Image => 
             ResourceStore.LoadBitmap( "Icons/File.png" );
 
         protected override void Initialize()
         {
-            AddExportHandler<Stream>( filePath =>
+            RegisterExportHandler<Stream>( filePath =>
             {
                 using ( var stream = File.Create( filePath ) )
                 {
@@ -24,7 +24,7 @@ namespace MikuMikuModel.Nodes.IO
                     Data.CopyTo( stream );
                 }
             } );
-            AddReplaceHandler<Stream>( File.OpenRead );
+            RegisterReplaceHandler<Stream>( File.OpenRead );
         }
 
         protected override void PopulateCore()

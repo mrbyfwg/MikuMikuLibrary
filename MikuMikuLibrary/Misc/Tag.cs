@@ -18,8 +18,8 @@ namespace MikuMikuLibrary.Misc
 
             var tag = new Tag();
 
-            int firstIndex = s.IndexOf( '(' );
-            int secondIndex = s.IndexOf( ')' );
+            var firstIndex = s.IndexOf( '(' );
+            var secondIndex = s.IndexOf( ')' );
 
             if ( firstIndex == -1 && secondIndex == -1 )
             {
@@ -31,8 +31,8 @@ namespace MikuMikuLibrary.Misc
                 tag.Key = s.Substring( 1, firstIndex - 1 );
                 tag.Values.AddRange(
                     s.Substring( firstIndex + 1, secondIndex - firstIndex - 1 )
-                        .Split( new[] { ',' }, StringSplitOptions.RemoveEmptyEntries )
-                        .Select( x => x.Trim() ) );
+                    .Split( new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries )
+                    .Select( x => x.Trim() ) );
             }
 
             else
@@ -57,21 +57,19 @@ namespace MikuMikuLibrary.Misc
         public static string GetName( string s )
         {
             int index = s.IndexOf( '@' );
-
             if ( index != -1 )
                 return s.Substring( 0, index );
-
             return s;
         }
 
-        public T GetValue<T>( int valueIndex = 0, T defaultValue = default )
+        public T GetValue<T>( int valueIndex = 0, T defaultValue = default( T ) )
         {
             if ( valueIndex < 0 || valueIndex >= Values.Count )
                 return defaultValue;
 
             var converter = TypeDescriptor.GetConverter( typeof( T ) );
             if ( converter.CanConvertFrom( typeof( string ) ) )
-                return ( T ) Convert.ChangeType( Values[ valueIndex ], typeof( T ), CultureInfo.InvariantCulture );
+                return ( T )Convert.ChangeType( Values[ valueIndex ], typeof( T ), CultureInfo.InvariantCulture );
 
             return defaultValue;
         }
@@ -80,7 +78,8 @@ namespace MikuMikuLibrary.Misc
         {
             if ( Values.Count <= 0 )
                 return $"@{Key}";
-            return $"@{Key}({string.Join( ",", Values )})";
+            else
+                return $"@{Key}({string.Join( ",", Values )})";
         }
 
         public Tag()
@@ -96,7 +95,7 @@ namespace MikuMikuLibrary.Misc
         public static TagList Parse( string s )
         {
             var tagList = new TagList();
-            int index = s.IndexOf( '@' );
+            var index = s.IndexOf( '@' );
 
             if ( index == -1 )
             {
@@ -120,7 +119,7 @@ namespace MikuMikuLibrary.Misc
             return tagList;
         }
 
-        public T GetValue<T>( string key, int valueIndex = 0, T defaultValue = default )
+        public T GetValue<T>( string key, int valueIndex = 0, T defaultValue = default( T ) )
         {
             var tag = this.FirstOrDefault( x =>
                 x.Key.Equals( key, StringComparison.OrdinalIgnoreCase ) );

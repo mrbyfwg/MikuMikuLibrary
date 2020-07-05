@@ -1,30 +1,28 @@
 ﻿using System;
-using System.ComponentModel;
 using System.IO;
 using MikuMikuLibrary.Databases;
 using MikuMikuLibrary.IO;
-using MikuMikuModel.Nodes.Collections;
 using MikuMikuModel.Nodes.IO;
-using MikuMikuModel.Nodes.TypeConverters;
+using MikuMikuModel.Nodes.Misc;
 
 namespace MikuMikuModel.Nodes.Databases
 {
     public class TextureDatabaseNode : BinaryFileNode<TextureDatabase>
     {
-        public override NodeFlags Flags =>
+        public override NodeFlags Flags => 
             NodeFlags.Export | NodeFlags.Replace | NodeFlags.Rename;
 
         protected override void Initialize()
         {
-            AddExportHandler<TextureDatabase>( filePath => Data.Save( filePath ) );
-            AddReplaceHandler<TextureDatabase>( BinaryFile.Load<TextureDatabase> );
+            RegisterExportHandler<TextureDatabase>( filePath => Data.Save( filePath ) );
+            RegisterReplaceHandler<TextureDatabase>( BinaryFile.Load<TextureDatabase> );
 
             base.Initialize();
         }
 
         protected override void PopulateCore()
         {
-            Nodes.Add( new ListNode<TextureInfo>( "Textures", Data.Textures, x => x.Name ) );
+            Nodes.Add( new ListNode<TextureEntry>( "Textures", Data.Textures, x => x.Name ) );
         }
 
         protected override void SynchronizeCore()
@@ -40,14 +38,13 @@ namespace MikuMikuModel.Nodes.Databases
         }
     }
 
-    public class TextureInfoNode : Node<TextureInfo>
+    public class TextureEntryNode : Node<TextureEntry>
     {
         public override NodeFlags Flags => NodeFlags.Rename;
 
-        [TypeConverter( typeof( IdTypeConverter ) )]
-        public uint Id
+        public int Id
         {
-            get => GetProperty<uint>();
+            get => GetProperty<int>();
             set => SetProperty( value );
         }
 
@@ -63,7 +60,7 @@ namespace MikuMikuModel.Nodes.Databases
         {
         }
 
-        public TextureInfoNode( string name, TextureInfo data ) : base( name, data )
+        public TextureEntryNode( string name, TextureEntry data ) : base( name, data )
         {
         }
     }

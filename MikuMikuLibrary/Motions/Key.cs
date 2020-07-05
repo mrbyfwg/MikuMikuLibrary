@@ -3,10 +3,10 @@
     public class Key
     {
         public float Value { get; set; }
-        public float Tangent { get; set; }
-        public ushort Frame { get; set; }
+        public float Interpolation { get; set; }
+        public int Frame { get; set; }
 
-        public override string ToString() => 
-            $"{Frame}, {Value}, {Tangent}";
+        public override string ToString() =>
+            $"{Frame}, {Value}, {Interpolation}";
     }
 }

@@ -8,9 +8,8 @@ namespace MikuMikuModel.Nodes.Motions
     {
         public override NodeFlags Flags => NodeFlags.None;
 
-        [Category( "General" )]
-        [DisplayName( "Uses tangent interpolation" )]
-        public bool HasTangents
+        [DisplayName( "Enable interpolation" )]
+        public bool IsInterpolated
         {
             get => GetProperty<bool>();
             set => SetProperty( value );

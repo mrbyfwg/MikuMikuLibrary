@@ -1,9 +1,7 @@
-﻿using System;
-using System.Diagnostics;
+﻿using MikuMikuLibrary.Textures;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
-using MikuMikuLibrary.Textures;
-using MikuMikuModel.Resources.Styles;
 
 namespace MikuMikuModel.GUI.Controls
 {
@@ -11,13 +9,18 @@ namespace MikuMikuModel.GUI.Controls
     {
         private static TextureViewControl sInstance;
 
+        public static TextureViewControl Instance => sInstance ?? ( sInstance = new TextureViewControl() );
+
+        public static void DisposeInstance()
+        {
+            sInstance?.Dispose();
+        }
+
         private Texture mTexture;
         private Bitmap[ , ] mBitmaps;
         private Bitmap mYcbcrBitmap;
         private int mMipMapIndex;
-        private int mArrayIndex;
-
-        public static TextureViewControl Instance => sInstance ?? ( sInstance = new TextureViewControl() );
+        private int mLevelIndex;
 
         public int CurrentMipMapIndex
         {
@@ -39,63 +42,46 @@ namespace MikuMikuModel.GUI.Controls
 
         public int CurrentLevelIndex
         {
-            get => mArrayIndex;
+            get => mLevelIndex;
             set
             {
                 if ( mTexture.IsYCbCr )
                     return;
 
-                value = Math.Max( 0, Math.Min( value, mTexture.ArraySize - 1 ) );
+                value = Math.Max( 0, Math.Min( value, mTexture.Depth - 1 ) );
 
-                if ( value == mArrayIndex )
+                if ( value == mLevelIndex )
                     return;
 
-                mArrayIndex = value;
+                mLevelIndex = value;
                 SetAll();
             }
         }
 
-        public static void ResetInstance()
-        {
-            sInstance?.DisposeBitmaps();
-        }
-
-        public static void DisposeInstance()
-        {
-            sInstance?.Dispose();
-        }
-
-        private void SetFormatText()
-        {
+        private void SetFormatText() =>
             mFormatLabel.Text = mTexture.IsYCbCr
                 ? "Format: YCbCr"
                 : $"Format: {Enum.GetName( typeof( TextureFormat ), mTexture.Format )}";
-        }
 
-        private void SetSizeText()
-        {
+        private void SetSizeText() =>
             mSizeLabel.Text = mTexture.IsYCbCr
                 ? $"Size: {mTexture.Width}x{mTexture.Height}"
-                : $"Size: {mTexture[ mArrayIndex, mMipMapIndex ].Width}x{mTexture[ mArrayIndex, mMipMapIndex ].Height}";
-        }
+                : $"Size: {mTexture[ mLevelIndex, mMipMapIndex ].Width}x{mTexture[ mLevelIndex, mMipMapIndex ].Height}";
 
-        private void SetMipMapText()
-        {
+        private void SetMipMapText() =>
             mMipMapLabel.Text = mTexture.IsYCbCr ? "MipMap: 1/1" : $"MipMap: {mMipMapIndex + 1}/{mTexture.MipMapCount}";
-        }
 
-        private void SetLevelText()
-        {
-            mLevelLabel.Text = mTexture.IsYCbCr ? "Level: 1/1" : $"Level: {mArrayIndex + 1}/{mTexture.ArraySize}";
-        }
+        private void SetLevelText() => mLevelLabel.Text =
+            mTexture.IsYCbCr ? "Level: 1/1" : $"Level: {mLevelIndex + 1}/{mTexture.Depth}";
 
         private void SetControlBackground()
         {
-            BackgroundImage = mTexture.IsYCbCr ? mYcbcrBitmap : mBitmaps[ mArrayIndex, mMipMapIndex ];
+            BackgroundImage = mTexture.IsYCbCr ? mYcbcrBitmap : mBitmaps[ mLevelIndex, mMipMapIndex ];
 
-            BackgroundImageLayout = ClientSize.Width < BackgroundImage.Width || ClientSize.Height < BackgroundImage.Height
-                ? ImageLayout.Zoom
-                : ImageLayout.Center;
+            BackgroundImageLayout =
+                ClientSize.Width < BackgroundImage.Width || ClientSize.Height < BackgroundImage.Height
+                    ? ImageLayout.Zoom
+                    : ImageLayout.Center;
 
             Refresh();
         }
@@ -111,28 +97,20 @@ namespace MikuMikuModel.GUI.Controls
 
         public void SetTexture( Texture texture )
         {
-            if ( mTexture == texture )
-                return;
-
             DisposeBitmaps();
 
             mTexture = texture;
 
             if ( texture.IsYCbCr )
-            {
                 mYcbcrBitmap = TextureDecoder.Decode( texture );
-            }
 
             else
             {
-                mBitmaps = new Bitmap[ texture.ArraySize, texture.MipMapCount ];
-                for ( int i = 0; i < texture.ArraySize; i++ )
+                mBitmaps = new Bitmap[ texture.Depth, texture.MipMapCount ];
+                for ( int i = 0; i < texture.Depth; i++ )
                 for ( int j = 0; j < texture.MipMapCount; j++ )
                     mBitmaps[ i, j ] = TextureDecoder.Decode( texture[ i, j ] );
             }
-
-            mArrayIndex = 0;
-            mMipMapIndex = 0;
 
             SetAll();
         }
@@ -146,30 +124,6 @@ namespace MikuMikuModel.GUI.Controls
             }
 
             mYcbcrBitmap?.Dispose();
-
-            mTexture = null;
-        }
-
-        private void OnStyleChanged( object sender, StyleChangedEventArgs eventArgs )
-        {
-            if ( eventArgs.Style != null )
-                StyleHelpers.ApplyStyle( this, eventArgs.Style );
-            else
-                StyleHelpers.RestoreDefaultStyle( this );
-
-            Refresh();
-        }
-
-        protected override void OnLoad( EventArgs eventArgs )
-        {
-            StyleHelpers.StoreDefaultStyle( this );
-
-            if ( StyleSet.CurrentStyle != null )
-                StyleHelpers.ApplyStyle( this, StyleSet.CurrentStyle );
-
-            StyleSet.StyleChanged += OnStyleChanged;
-
-            base.OnLoad( eventArgs );
         }
 
         protected override bool ProcessCmdKey( ref Message msg, Keys keyData )
@@ -197,8 +151,8 @@ namespace MikuMikuModel.GUI.Controls
         }
 
 
-        /// <summary>
-        ///     Clean up any resources being used.
+        /// <summary> 
+        /// Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose( bool disposing )
@@ -207,7 +161,6 @@ namespace MikuMikuModel.GUI.Controls
             {
                 mComponents?.Dispose();
                 DisposeBitmaps();
-                StyleSet.StyleChanged -= OnStyleChanged;
             }
 
             base.Dispose( disposing );

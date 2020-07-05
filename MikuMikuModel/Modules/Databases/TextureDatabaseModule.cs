@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using MikuMikuLibrary.Databases;
 using MikuMikuLibrary.IO;
@@ -8,11 +7,9 @@ namespace MikuMikuModel.Modules.Databases
 {
     public class TextureDatabaseModule : FormatModule<TextureDatabase>
     {
-        public override IReadOnlyList<FormatExtension> Extensions { get; } = new[]
-        {
-            new FormatExtension( "Texture Database (Classic)", "bin", FormatExtensionFlags.Import | FormatExtensionFlags.Export ),
-            new FormatExtension( "Texture Database (Modern)", "txi", FormatExtensionFlags.Import | FormatExtensionFlags.Export )
-        };
+        public override FormatModuleFlags Flags => FormatModuleFlags.Import | FormatModuleFlags.Export;
+        public override string Name => "Texture Database";
+        public override string[] Extensions => new[] { "bin", "txi" };
 
         public override bool Match( string fileName )
         {
@@ -28,14 +25,10 @@ namespace MikuMikuModel.Modules.Databases
             return base.Match( fileName );
         }
 
-        protected override TextureDatabase ImportCore( Stream source, string fileName )
-        {
-            return BinaryFile.Load<TextureDatabase>( source, true );
-        }
+        protected override TextureDatabase ImportCore( Stream source, string fileName ) =>
+            BinaryFile.Load<TextureDatabase>( source, true );
 
-        protected override void ExportCore( TextureDatabase model, Stream destination, string fileName )
-        {
+        protected override void ExportCore( TextureDatabase model, Stream destination, string fileName ) =>
             model.Save( destination, true );
-        }
     }
 }

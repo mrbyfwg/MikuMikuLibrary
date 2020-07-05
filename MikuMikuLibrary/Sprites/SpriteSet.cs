@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using MikuMikuLibrary.Databases;
 using MikuMikuLibrary.IO;
 using MikuMikuLibrary.IO.Common;
 using MikuMikuLibrary.IO.Sections;
 using MikuMikuLibrary.Textures;
+using System.Collections.Generic;
+using System.IO;
+using MikuMikuLibrary.Databases;
 
 namespace MikuMikuLibrary.Sprites
 {
@@ -26,53 +26,53 @@ namespace MikuMikuLibrary.Sprites
             long spritesOffset = reader.ReadOffset();
             long textureNamesOffset = reader.ReadOffset();
             long spriteNamesOffset = reader.ReadOffset();
-            long spriteModesOffset = reader.ReadOffset();
+            long spriteUnknownsOffset = reader.ReadOffset();
 
-            reader.ReadAtOffsetIf( section == null, texturesOffset,
-                () => { TextureSet.Load( reader.BaseStream, true ); } );
+            reader.ReadAtOffsetIf( section == null, texturesOffset, () =>
+            {
+                TextureSet.Load( reader.BaseStream, true );
+            } );
 
+            Sprites.Capacity = spriteCount;
             reader.ReadAtOffset( spritesOffset, () =>
             {
-                Sprites.Capacity = spriteCount;
-
                 for ( int i = 0; i < spriteCount; i++ )
                 {
                     var sprite = new Sprite();
-                    sprite.Read( reader );
+                    sprite.ReadFirst( reader );
                     Sprites.Add( sprite );
                 }
             } );
 
-            reader.ReadAtOffsetIf( section?.Endianness != Endianness.Big, textureNamesOffset, () =>
+            reader.ReadAtOffsetIf( section?.Endianness != Endianness.BigEndian, textureNamesOffset, () =>
             {
                 foreach ( var texture in TextureSet.Textures )
                     texture.Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             } );
 
-            reader.ReadAtOffsetIf( section?.Endianness != Endianness.Big, spriteNamesOffset, () =>
+            reader.ReadAtOffsetIf( section?.Endianness != Endianness.BigEndian, spriteNamesOffset, () =>
             {
                 foreach ( var sprite in Sprites )
                     sprite.Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
             } );
 
-            reader.ReadAtOffset( spriteModesOffset, () =>
+            reader.ReadAtOffset( spriteUnknownsOffset, () =>
             {
                 foreach ( var sprite in Sprites )
-                    sprite.ReadMode( reader );
+                    sprite.ReadSecond( reader );
             } );
         }
 
         public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
             writer.Write( 0 );
-            writer.ScheduleWriteOffsetIf( section == null, 1, 16, AlignmentMode.Left,
-                () => TextureSet.Save( writer.BaseStream, true ) );
+            writer.ScheduleWriteOffsetIf( section == null, 1, 16, AlignmentMode.Left, () => TextureSet.Save( writer.BaseStream, true ) );
             writer.Write( TextureSet.Textures.Count );
             writer.Write( Sprites.Count );
             writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var sprite in Sprites )
-                    sprite.Write( writer );
+                    sprite.WriteFirst( writer );
             } );
             writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
@@ -87,8 +87,8 @@ namespace MikuMikuLibrary.Sprites
             writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
                 foreach ( var sprite in Sprites )
-                    sprite.WriteMode( writer );
-
+                    sprite.WriteSecond( writer );
+                    
                 writer.PopStringTablesReversed();
             } );
         }
@@ -101,18 +101,17 @@ namespace MikuMikuLibrary.Sprites
                 return;
 
             string spriteDatabaseFilePath = Path.ChangeExtension( filePath, "spi" );
-
             if ( !File.Exists( spriteDatabaseFilePath ) )
                 return;
 
-            var spriteDatabase = Load<SpriteDatabase>( spriteDatabaseFilePath );
-            var spriteSetInfo = spriteDatabase.SpriteSets[ 0 ];
+            var spriteDatabase = BinaryFile.Load<SpriteDatabase>( spriteDatabaseFilePath );
+            var spriteSetEntry = spriteDatabase.SpriteSets[ 0 ];
 
-            foreach ( var spriteInfo in spriteSetInfo.Sprites )
-                Sprites[ spriteInfo.Index ].Name = spriteInfo.Name;
+            foreach ( var spriteEntry in spriteSetEntry.Sprites )
+                Sprites[ spriteEntry.Index ].Name = spriteEntry.Name;
 
-            foreach ( var textureInfo in spriteSetInfo.Textures )
-                TextureSet.Textures[ textureInfo.Index ].Name = textureInfo.Name;
+            foreach ( var textureEntry in spriteSetEntry.Textures )
+                TextureSet.Textures[ textureEntry.Index ].Name = textureEntry.Name;
         }
 
         public SpriteSet()

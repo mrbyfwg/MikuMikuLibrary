@@ -36,19 +36,10 @@ namespace MikuMikuModel.Nodes.Wrappers
 
         protected override void OnAfterExpand( TreeViewEventArgs e )
         {
-            BeginUpdate();
             PopulateNode( e.Node as NodeAsTreeNode );
 
-            for ( int i = 0; i < e.Node.Nodes.Count; )
-            {
-                if ( e.Node.Nodes[ i ] is NodeAsTreeNode )
-                    i++;
-
-                else
-                    e.Node.Nodes.RemoveAt( i );
-            }
-
-            EndUpdate();
+            if ( e.Node.Nodes.Count >= 1 && string.IsNullOrEmpty( e.Node.Nodes[ 0 ].Name ) )
+                e.Node.Nodes.RemoveAt( 0 );
 
             base.OnAfterExpand( e );
         }

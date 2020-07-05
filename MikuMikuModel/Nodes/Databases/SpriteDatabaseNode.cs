@@ -13,8 +13,8 @@ namespace MikuMikuModel.Nodes.Databases
 
         protected override void Initialize()
         {
-            AddExportHandler<SpriteDatabase>( filePath => Data.Save( filePath ) );
-            AddReplaceHandler<SpriteDatabase>( BinaryFile.Load<SpriteDatabase> );
+            RegisterExportHandler<SpriteDatabase>( filePath => Data.Save( filePath ) );
+            RegisterReplaceHandler<SpriteDatabase>( BinaryFile.Load<SpriteDatabase> );
 
             base.Initialize();
         }

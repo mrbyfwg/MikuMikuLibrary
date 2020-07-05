@@ -66,10 +66,10 @@
             this.Controls.Add(this.mCancelButton);
             this.Controls.Add(this.mOkButton);
             this.Controls.Add(this.mNodeTreeView);
-            this.DoubleBuffered = true;
+            this.MinimizeBox = false;
             this.Name = "FarcArchiveViewForm";
+            this.ShowIcon = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-            this.Text = "Please select a node.";
             this.ResumeLayout(false);
 
         }

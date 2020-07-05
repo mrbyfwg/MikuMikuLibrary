@@ -1,10 +1,10 @@
-﻿using System;
+﻿using MikuMikuLibrary.IO.Common;
+using MikuMikuLibrary.Textures.DDS;
+using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Numerics;
-using MikuMikuLibrary.IO.Common;
-using MikuMikuLibrary.Textures.DDS;
 
 namespace MikuMikuLibrary.Textures
 {
@@ -16,9 +16,9 @@ namespace MikuMikuLibrary.Textures
         {
             var ddsHeader = new DDSHeader( source );
 
-            int arraySize = 1;
+            int depth = 1;
             if ( ddsHeader.Flags.HasFlag( DDSHeaderFlags.Depth ) )
-                arraySize = ddsHeader.Depth;
+                depth = ddsHeader.Depth;
 
             int mipMapCount = 1;
             if ( ddsHeader.Flags.HasFlag( DDSHeaderFlags.MipMapCount ) )
@@ -26,11 +26,14 @@ namespace MikuMikuLibrary.Textures
 
             var format = TextureUtilities.GetTextureFormat( ddsHeader.PixelFormat );
 
-            var texture = new Texture( ddsHeader.Width, ddsHeader.Height, format, arraySize, mipMapCount );
-
+            var texture = new Texture( ddsHeader.Width, ddsHeader.Height, format, depth, mipMapCount );
             foreach ( var level in texture.EnumerateLevels() )
-            foreach ( var mipMap in level )
-                source.Read( mipMap.Data, 0, mipMap.Data.Length );
+            {
+                foreach ( var mipMap in level )
+                {
+                    source.Read( mipMap.Data, 0, mipMap.Data.Length );
+                }
+            }
 
             return texture;
         }
@@ -42,14 +45,14 @@ namespace MikuMikuLibrary.Textures
 
             if ( TextureFormatUtilities.IsCompressed( format ) )
             {
-                width = AlignmentHelper.Align( bitmap.Width, 4 );
-                height = AlignmentHelper.Align( bitmap.Height, 4 );
+                width = AlignmentUtilities.AlignToNextPowerOfTwo( bitmap.Width );
+                height = AlignmentUtilities.AlignToNextPowerOfTwo( bitmap.Height );
             }
 
             Texture texture;
 
             if ( generateMipMaps && TextureFormatUtilities.IsCompressed( format ) )
-                texture = new Texture( width, height, format, 1, ( int ) Math.Log( Math.Max( width, height ), 2 ) + 1 );
+                texture = new Texture( width, height, format, 1, ( int )Math.Log( Math.Max( width, height ), 2 ) + 1 );
 
             else
                 texture = new Texture( width, height, format );
@@ -62,8 +65,8 @@ namespace MikuMikuLibrary.Textures
 
         public static unsafe Texture EncodeYCbCr( Bitmap bitmap )
         {
-            int width = AlignmentHelper.Align( bitmap.Width, 4 );
-            int height = AlignmentHelper.Align( bitmap.Height, 4 );
+            int width = AlignmentUtilities.AlignToNextPowerOfTwo( bitmap.Width );
+            int height = AlignmentUtilities.AlignToNextPowerOfTwo( bitmap.Height );
 
             var texture = new Texture( width, height, TextureFormat.ATI2, 1, 2 );
 
@@ -83,12 +86,16 @@ namespace MikuMikuLibrary.Textures
                 for ( int y = 0; y < lumBitmap.Height; y++ )
                 {
                     var color = Color.FromArgb( *( ( int* ) bitmapData.Scan0 + y * bitmap.Width + x ) );
-
-                    var ycbcrVector = Vector3.Transform( Vector3.Divide( new Vector3( color.R, color.G, color.B ), 255 ), sRGBtoYCbCr );
+                    var ycbcrVector =
+                        Vector3.Transform( Vector3.Divide( new Vector3( color.R, color.G, color.B ), 255 ),
+                            sRGBtoYCbCr );
 
                     var lumColor = Color.FromArgb( ( int ) ( ycbcrVector.X * 255 ), color.A, 0 );
 
-                    var cbrVector = Vector3.Multiply( Vector3.Min( Vector3.One, new Vector3( ycbcrVector.Y + 0.5f, ycbcrVector.Z + 0.5f, 0 ) ), 255 );
+                    var cbrVector =
+                        Vector3.Multiply(
+                            Vector3.Min( Vector3.One, new Vector3( ycbcrVector.Y + 0.5f, ycbcrVector.Z + 0.5f, 0 ) ),
+                            255 );
 
                     var cbrColor = Color.FromArgb( ( int ) cbrVector.X, ( int ) cbrVector.Y, 0 );
 
@@ -118,40 +125,30 @@ namespace MikuMikuLibrary.Textures
                 bitmap = new Bitmap( bitmap, subTexture.Width, subTexture.Height );
             }
 
-            var rectangle = new Rectangle( 0, 0, bitmap.Width, bitmap.Height );
+            var rect = new Rectangle( 0, 0, bitmap.Width, bitmap.Height );
 
-            switch ( subTexture.Format )
+            if ( subTexture.Format == TextureFormat.RGB )
             {
-                case TextureFormat.RGB8:
-                {
-                    var bitmapData = bitmap.LockBits( rectangle, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb );
+                var bitmapData = bitmap.LockBits( rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb );
 
-                    fixed ( byte* ptr = subTexture.Data ) 
-                        BGRtoRGB( ( byte* ) bitmapData.Scan0, ptr, subTexture.Data.Length );
+                fixed ( byte* ptr = subTexture.Data )
+                    BGRtoRGB( ( byte* )bitmapData.Scan0, ptr, subTexture.Data.Length );
 
-                    bitmap.UnlockBits( bitmapData );
-                    break;
-                }
+                bitmap.UnlockBits( bitmapData );
+            }
+            else if ( subTexture.Format == TextureFormat.RGBA )
+            {
+                var bitmapData = bitmap.LockBits( rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb );
 
-                case TextureFormat.RGBA8:
-                {
-                    var bitmapData = bitmap.LockBits( rectangle, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb );
+                fixed ( byte* ptr = subTexture.Data )
+                    Int32RGBAToByte( ( int* )bitmapData.Scan0, ptr, subTexture.Data.Length );
 
-                    fixed ( byte* ptr = subTexture.Data ) 
-                        Int32RGBAToByte( ( int* ) bitmapData.Scan0, ptr, subTexture.Data.Length );
-
-                    bitmap.UnlockBits( bitmapData );
-
-                    break;
-                }
-
-                default:
-                {
-                    var compressedPixels = DDSCodec.CompressPixelData( bitmap, TextureUtilities.GetDDSPixelFormat( subTexture.Format ) );
-                    Array.Copy( compressedPixels, subTexture.Data, subTexture.Data.Length );
-
-                    break;
-                }
+                bitmap.UnlockBits( bitmapData );
+            }
+            else
+            {
+                var compressedPixels = DDSCodec.CompressPixelData( bitmap, TextureUtilities.GetDDSPixelFormat( subTexture.Format ) );
+                Array.Copy( compressedPixels, subTexture.Data, subTexture.Data.Length );
             }
 
             if ( ownsBitmap )
@@ -172,7 +169,7 @@ namespace MikuMikuLibrary.Textures
 
         private static unsafe void Int32RGBAToByte( int* source, byte* destination, int length )
         {
-            var end = destination + length;
+            byte* end = destination + length;
 
             while ( destination < end )
             {
@@ -186,8 +183,7 @@ namespace MikuMikuLibrary.Textures
 
         private static unsafe void BGRtoRGB( byte* source, byte* destination, int length )
         {
-            var end = source + length;
-
+            byte* end = source + length;
             while ( source < end )
             {
                 byte b = *source++;

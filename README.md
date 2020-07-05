@@ -1,10 +1,6 @@
 # Miku Miku Library
 Format library and file editor for Hatsune Miku: Project DIVA games.
 
-# Building
-* [Stable (release) builds](https://github.com/blueskythlikesclouds/MikuMikuLibrary/releases)
-* [Unstable (development) builds](https://ci.appveyor.com/project/blueskythlikesclouds/mikumikulibrary/build/artifacts)
-
 # Projects
 ## Miku Miku Library
 This is the main library of the solution, providing methods and classes to read, edit, and write file formats in Hatsune Miku: Project DIVA games.
@@ -16,32 +12,21 @@ A GUI front-end of the library that allows you to work with models, textures, mo
 These are command line front-ends for certain functionalities of the library.
 
 ### Database Converter
-A program that allows you to convert database files to .xml and vice versa.
+A program that allows you to convert database files to XML and vice versa.
 
 Supported files:
-* aet_db.bin/.aei
-* bone_data.bin/.bon
+* aet_db.bin
+* bone_data.bin
 * mot_db.bin
-* obj_db.bin/.osi
-* spr_db.bin/.spi
+* obj_db.bin
+* spr_db.bin
 * stage_data.bin
-* str_array.bin/string_array.bin/.str
-* tex_db.bin/.txi
+* str_array.bin
+* string_array.bin
+* tex_db.bin
 
 ### FARC Pack
-A program that allows you to extract .farc files or create them from folders.
+A program that allows you to extract FARC files or create them.
 
 ### TXP Converter
-A program allows you to modify _tex.bin or .txd files by extracting them to .dds or .png files.
-
-# Special thanks
-* [Brolijah](https://github.com/Brolijah)
-* [chrrox](https://www.deviantart.com/chrrox)
-* [korenkonder](https://github.com/korenkonder)
-* [lybxlpsv](https://github.com/lybxlpsv)
-* [minmode](https://www.deviantart.com/minmode)
-* [nastys](https://github.com/nastys)
-* [s117](https://github.com/s117)
-* [samyuu](https://github.com/samyuu)
-* [Stewie1.0](https://github.com/Stewie100)
-* [Waelwindows](https://github.com/Waelwindows)
+A program allows you to modify _tex.bin and .txd files by extracting them to .dds or .png files.

@@ -1,106 +1,291 @@
-﻿using System;
+﻿//===============================================================//
+// Taken and modified from: https://github.com/TGEnigma/Amicitia //
+//===============================================================//
+
+using System;
 using System.IO;
 
 namespace MikuMikuLibrary.IO.Common
 {
-    public sealed class StreamView : Stream
+    public class StreamView : Stream
     {
-        private readonly Stream mSourceStream;
-        private readonly Stream mRootStream;
-        private readonly Stream mSeekingStream;
-        private readonly long mPosition;
-
-        private long mSubPosition;
-        private long mSeekingStreamPosition;
+        private readonly Stream mStream;
+        private long mSourcePositionCopy;
+        private readonly long mStreamPosition;
+        private long mPosition;
         private long mLength;
-
+        private readonly long mMaxLength;
         private readonly bool mLeaveOpen;
 
-        public override bool CanRead => mSourceStream.CanRead;
-        public override bool CanSeek => mSourceStream.CanSeek;
-        public override bool CanWrite => false;
-        public override long Length => mLength;
-
-        public override long Position
+        public StreamView( Stream source, long position, long length, bool leaveOpen = true )
         {
-            get => mSubPosition;
-            set => mSubPosition = value;
+            if ( source == null )
+                throw new ArgumentNullException( nameof( source ) );
+
+            if ( position < 0 || ( source.CanSeek && ( position >= source.Length || position + length > source.Length ) ) )
+                throw new ArgumentOutOfRangeException( nameof( position ) );
+
+            if ( length < 0 )
+                throw new ArgumentOutOfRangeException( nameof( length ) );
+
+            mStream = source;
+            mStreamPosition = position;
+            mPosition = 0;
+            mMaxLength = mLength = length;
+            mLeaveOpen = leaveOpen;
         }
 
-        public override void Flush() => 
-            mSourceStream.Flush();
+        public override void Flush()
+        {
+            mStream.Flush();
+        }
 
         public override long Seek( long offset, SeekOrigin origin )
         {
             switch ( origin )
             {
                 case SeekOrigin.Begin:
-                    mSubPosition = offset;
+                    {
+                        if ( offset > mLength || offset > mStream.Length )
+                            throw new ArgumentOutOfRangeException( nameof( offset ) );
+
+                        mPosition = offset;
+                    }
                     break;
                 case SeekOrigin.Current:
-                    mSubPosition += offset;
+                    {
+                        if ( mPosition + offset > mLength || mPosition + offset > mStream.Length )
+                            throw new ArgumentOutOfRangeException( nameof( offset ) );
+
+                        mPosition += offset;
+                    }
                     break;
                 case SeekOrigin.End:
-                    mSubPosition = mPosition + mLength - offset;
-                    break;
+                    {
+                        if ( offset < mLength || offset > 0 )
+                            throw new ArgumentOutOfRangeException( nameof( offset ) );
 
+                        mPosition = mStreamPosition + mLength - offset;
+                    }
+                    break;
                 default:
-                    throw new ArgumentOutOfRangeException( nameof( origin ), origin, null );
+                    throw new ArgumentOutOfRangeException( nameof( origin ) );
             }
 
-            return mSubPosition;
+            return mPosition;
         }
 
-        public override void SetLength( long value ) => 
+        public override void SetLength( long value )
+        {
+            if ( value < 0 )
+                throw new ArgumentOutOfRangeException( nameof( value ) );
+
+            if ( value > mStream.Length )
+                throw new ArgumentOutOfRangeException( nameof( value ) );
+
             mLength = value;
+        }
 
         public override int Read( byte[] buffer, int offset, int count )
         {
-            if ( mSubPosition >= mLength )
+            if ( EndOfStream )
                 return 0;
 
-            if ( mSubPosition + count > mLength )
-                count = ( int ) ( mLength - mSubPosition );
+            if ( mPosition + count > mLength )
+                count = ( int )( mLength - mPosition );
 
-            long previousPosition = mSeekingStream.Position;
-            mSeekingStream.Seek( mSeekingStreamPosition, SeekOrigin.Begin );
-
-            int result = mSourceStream.Read( buffer, offset, count );
-            mSubPosition += count;
-            mSeekingStreamPosition = mSeekingStream.Position;
-
-            mSeekingStream.Seek( previousPosition, SeekOrigin.Begin );
+            if ( mStream.CanSeek )
+            {
+                SavePosition();
+                SetUnderlyingStreamPosition();
+            }
+            
+            int result = mStream.Read( buffer, offset, count );
+            mPosition += count;
+            
+            if ( mStream.CanSeek )
+                RestorePosition();
 
             return result;
         }
-          
-        public override void Write( byte[] buffer, int offset, int count ) => 
-            throw new NotSupportedException();
 
+        public override void Write( byte[] buffer, int offset, int count )
+        {
+            if ( EndOfStream )
+                throw new IOException( "Attempted to write past end of stream" );
+
+            if ( mPosition + count > mLength )
+                throw new IOException( "Attempted to write past end of stream" );
+            
+            if ( mStream.CanSeek )
+            {
+                SavePosition();
+                SetUnderlyingStreamPosition();
+            }
+            
+            mStream.Write( buffer, offset, count );
+            mPosition += count;
+            
+            if ( mStream.CanSeek )
+                RestorePosition();
+        }
+
+        public override bool CanRead
+        {
+            get { return mStream.CanRead; }
+        }
+
+        public override bool CanSeek
+        {
+            get { return mStream.CanSeek; }
+        }
+
+        public override bool CanWrite
+        {
+            get { return mStream.CanWrite; }
+        }
+
+        public override long Length
+        {
+            get { return mLength; }
+        }
+
+        public override long Position
+        {
+            get { return mPosition; }
+            set { mPosition = value; }
+        }
+
+        public bool EndOfStream => mPosition == mMaxLength;
+
+        public override int ReadByte()
+        {
+            if ( EndOfStream )
+                return -1;
+            
+            if ( mStream.CanSeek )
+            {
+                SavePosition();
+                SetUnderlyingStreamPosition();
+            }
+            
+            int value = mStream.ReadByte();
+            mPosition++;
+            
+            if ( mStream.CanSeek )
+                RestorePosition();
+
+            return value;
+        }
+
+        public override void WriteByte( byte value )
+        {
+            if ( EndOfStream )
+                throw new IOException( "Attempted to write past end of stream" );
+            
+            if ( mStream.CanSeek )
+            {
+                SavePosition();
+                SetUnderlyingStreamPosition();
+            }
+            
+            mStream.WriteByte( value );
+            mPosition++;
+            
+            if ( mStream.CanSeek )
+                RestorePosition();
+        }
+
+        /*
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+        {
+            SaveSourcePosition();
+            SetSourcePositionForSubstream();
+            var value = mSourceStream.BeginRead(buffer, offset, count, callback, state);
+            RestoreSourcePosition();
+
+            return value;
+        }
+
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+        {
+            SaveSourcePosition();
+            SetSourcePositionForSubstream();
+            var value = mSourceStream.BeginWrite(buffer, offset, count, callback, state);
+            RestoreSourcePosition();
+
+            return value;
+        }
+
+        public override Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+        {
+            SaveSourcePosition();
+            SetSourcePositionForSubstream();
+            var value = mSourceStream.CopyToAsync(destination, bufferSize, cancellationToken);
+            RestoreSourcePosition();
+
+            return value;
+        }
+
+        public override int EndRead(IAsyncResult asyncResult)
+        {
+            SaveSourcePosition();
+            SetSourcePositionForSubstream();
+            var value = mSourceStream.EndRead(asyncResult);
+            RestoreSourcePosition();
+
+            return value;
+        }
+
+        public override void EndWrite(IAsyncResult asyncResult)
+        {
+            SaveSourcePosition();
+            SetSourcePositionForSubstream();
+            mSourceStream.EndWrite(asyncResult);
+            RestoreSourcePosition();
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            SaveSourcePosition();
+            SetSourcePositionForSubstream();
+            var value = mSourceStream.WriteAsync(buffer, offset, count, cancellationToken);
+            RestoreSourcePosition();
+
+            return value;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            SaveSourcePosition();
+            SetSourcePositionForSubstream();
+            var value = mSourceStream.ReadAsync(buffer, offset, count, cancellationToken);
+            RestoreSourcePosition();
+
+            return value;
+        }
+        */
+        protected void SavePosition()
+        {
+            mSourcePositionCopy = mStream.Position;
+        }
+
+        protected void SetUnderlyingStreamPosition()
+        {
+            mStream.Position = mStreamPosition + mPosition;
+        }
+
+        protected void RestorePosition()
+        {
+            mStream.Position = mSourcePositionCopy;
+        }
+        
         protected override void Dispose( bool disposing )
         {
             if ( disposing && !mLeaveOpen )
-                mSourceStream.Close();
-
+                mStream.Dispose();
+                
             base.Dispose( disposing );
-        }
-
-        public StreamView( Stream sourceStream, Stream rootStream, long position, long length, bool leaveOpen = false )
-        {
-            mSourceStream = sourceStream;
-            mRootStream = rootStream;
-            mSeekingStream = rootStream ?? sourceStream;
-            mPosition = position;
-            mSubPosition = 0;
-            mSeekingStreamPosition = position;
-            mLength = length;
-            mLeaveOpen = leaveOpen;
-        }
-
-        public StreamView( Stream sourceStream, long position, long length, bool leaveOpen = false )
-            : this( sourceStream, null, position, length, leaveOpen )
-        {
-
         }
     }
 }

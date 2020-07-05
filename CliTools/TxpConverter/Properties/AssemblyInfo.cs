@@ -5,12 +5,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle( "TXP Converter" )]
-[assembly:
-    AssemblyDescription( "A program that can extract and modify TXP files from Hatsune Miku: Project DIVA games." )]
+[assembly: AssemblyDescription( "A program that can extract and modify TXP files from Hatsune Miku: Project DIVA games." )]
 [assembly: AssemblyConfiguration( "" )]
 [assembly: AssemblyCompany( "" )]
 [assembly: AssemblyProduct( "TXP Converter" )]
-[assembly: AssemblyCopyright( "Copyright © 2020 Skyth (MIT License)" )]
+[assembly: AssemblyCopyright( "Copyright © 2019 Skyth" )]
 [assembly: AssemblyTrademark( "" )]
 [assembly: AssemblyCulture( "" )]
 

@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using MikuMikuLibrary.Textures;
+using System.Collections.Generic;
 using System.Drawing;
-using MikuMikuLibrary.Textures;
 
 namespace MikuMikuLibrary.Sprites
 {
@@ -8,20 +8,11 @@ namespace MikuMikuLibrary.Sprites
     {
         public static Bitmap Crop( Sprite sprite, SpriteSet parentSet )
         {
-            if ( sprite.TextureIndex >= parentSet.TextureSet.Textures.Count )
-                return null;
-
-            var texture = parentSet.TextureSet.Textures[ ( int ) sprite.TextureIndex ];
-
-            if ( sprite.Width <= 0 || sprite.Height <= 0 || 
-                 sprite.X + sprite.Width > texture.Width || sprite.Y + sprite.Height > texture.Height )
-                return null;
-
-            var bitmap = TextureDecoder.Decode( texture );
-
+            var bitmap = TextureDecoder.Decode(
+                parentSet.TextureSet.Textures[ sprite.TextureIndex ] );
             bitmap.RotateFlip( RotateFlipType.Rotate180FlipX );
 
-            Bitmap croppedBitmap = bitmap.Clone(
+            var croppedBitmap = bitmap.Clone(
                 new RectangleF( sprite.X, sprite.Y, sprite.Width, sprite.Height ), bitmap.PixelFormat );
 
             bitmap.Dispose();
@@ -41,12 +32,12 @@ namespace MikuMikuLibrary.Sprites
             var sprites = new Dictionary<Sprite, Bitmap>( spriteSet.Sprites.Count );
             foreach ( var sprite in spriteSet.Sprites )
             {
-                var sourceBitmap = bitmaps[ ( int ) sprite.TextureIndex ];
+                var sourceBitmap = bitmaps[ sprite.TextureIndex ];
                 var bitmap = sourceBitmap.Clone(
                     new RectangleF( sprite.X, sprite.Y, sprite.Width, sprite.Height ), sourceBitmap.PixelFormat );
                 sprites.Add( sprite, bitmap );
             }
-
+            
             foreach ( var bitmap in bitmaps )
                 bitmap.Dispose();
 

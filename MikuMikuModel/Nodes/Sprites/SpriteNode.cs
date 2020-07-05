@@ -1,176 +1,94 @@
-﻿using System;
-using System.ComponentModel;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Windows.Forms;
+﻿using System.ComponentModel;
 using MikuMikuLibrary.Sprites;
-using MikuMikuModel.GUI.Controls;
-using MikuMikuModel.Mementos;
+using MikuMikuModel.Nodes.TypeConverters;
 
 namespace MikuMikuModel.Nodes.Sprites
 {
     public class SpriteNode : Node<Sprite>
     {
-        public override NodeFlags Flags => NodeFlags.Rename | NodeFlags.Export;
+        public override NodeFlags Flags => NodeFlags.Rename;
 
-        [Category( "General" )]
         [DisplayName( "Texture index" )]
-        public uint TextureIndex
+        public int TextureIndex
         {
-            get => GetProperty<uint>();
+            get => GetProperty<int>();
             set => SetProperty( value );
         }
 
-        [Category( "General" )]
-        [DisplayName( "Resolution mode" )]
-        public ResolutionMode ResolutionMode
-        {
-            get => GetProperty<ResolutionMode>();
-            set => SetProperty( value );
-        }
-
-        [Browsable( false )]
-        public float NormalizedX
-        {
-            get => GetProperty<float>();
-            set => SetProperty( value );
-        }
-
-        [Browsable( false )]
-        public float NormalizedY
-        {
-            get => GetProperty<float>();
-            set => SetProperty( value );
-        }        
-        
-        [Browsable( false )]
-        public float NormalizedWidth
-        {
-            get => GetProperty<float>();
-            set => SetProperty( value );
-        }
-
-        [Browsable( false )]
-        public float NormalizedHeight
-        {
-            get => GetProperty<float>();
-            set => SetProperty( value );
-        }
-
-        [Category( "General" )]
         public float X
         {
             get => GetProperty<float>();
-            set
-            {
-                MementoStack.BeginCompoundMemento();
-
-                SetProperty( value );
-                CalculateNormalizedValues();
-
-                MementoStack.EndCompoundMemento();
-            }
+            set => SetProperty( value );
         }
 
-        [Category( "General" )]
         public float Y
         {
             get => GetProperty<float>();
-            set
-            {
-                MementoStack.BeginCompoundMemento();
-
-                SetProperty( value );
-                CalculateNormalizedValues();
-
-                MementoStack.EndCompoundMemento();
-            }
+            set => SetProperty( value );
         }
 
-        [Category( "General" )]
         public float Width
         {
             get => GetProperty<float>();
-            set
-            {
-                MementoStack.BeginCompoundMemento();
-
-                SetProperty( value );
-                CalculateNormalizedValues();
-
-                MementoStack.EndCompoundMemento();
-            }
+            set => SetProperty( value );
         }
 
-        [Category( "General" )]
         public float Height
         {
             get => GetProperty<float>();
-            set
-            {
-                MementoStack.BeginCompoundMemento();
-
-                SetProperty( value );
-                CalculateNormalizedValues();
-
-                MementoStack.EndCompoundMemento();
-            }
+            set => SetProperty( value );
         }
 
-        private void CalculateNormalizedValues()
+        [TypeConverter( typeof( Int32HexTypeConverter ) )]
+        public int Field00
         {
-            var spriteSetNode = FindParent<SpriteSetNode>();
-            var spriteSet = spriteSetNode.Data;
+            get => GetProperty<int>();
+            set => SetProperty( value );
+        }
 
-            if ( Data.TextureIndex >= spriteSet.TextureSet.Textures.Count )
-                return;
+        [TypeConverter( typeof( Int32HexTypeConverter ) )]
+        public int Field01
+        {
+            get => GetProperty<int>();
+            set => SetProperty( value );
+        }
 
-            var texture = spriteSet.TextureSet.Textures[ ( int ) Data.TextureIndex ];
+        public float Field02
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
+        
+        [DisplayName( "Normalized X" )]
+        public float NdcX
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-            NormalizedX = Data.X / texture.Width;
-            NormalizedY = Data.Y / texture.Height;
-            NormalizedWidth = Data.Width / texture.Width;
-            NormalizedHeight = Data.Height / texture.Height;
+        [DisplayName( "Normalized Y" )]
+        public float NdcY
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
+
+        [DisplayName( "Normalized width" )]
+        public float NdcWidth
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
+
+        [DisplayName( "Normalized height" )]
+        public float NdcHeight
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
         }
 
         protected override void Initialize()
         {
-            AddExportHandler<Bitmap>( filePath =>
-            {
-                var imageFormat = ImageFormat.Png;
-
-                if ( !string.IsNullOrEmpty( filePath ) )
-                {
-                    string extension = Path.GetExtension( filePath ).Trim( '.' ).ToLowerInvariant();
-
-                    switch ( extension )
-                    {
-                        case "png":
-                            imageFormat = ImageFormat.Png;
-                            break;
-
-                        case "jpg":
-                        case "jpeg":
-                            imageFormat = ImageFormat.Jpeg;
-                            break;
-
-                        case "gif":
-                            imageFormat = ImageFormat.Gif;
-                            break;
-
-                        case "bmp":
-                            imageFormat = ImageFormat.Bmp;
-                            break;
-
-                        default:
-                            throw new ArgumentException( "Image format could not be detected", nameof( filePath ) );
-                    }
-                }
-
-                using ( var bitmap = SpriteCropper.Crop( Data, FindParent<SpriteSetNode>().Data ) )
-                    bitmap.Save( filePath, imageFormat );
-            } );
         }
 
         protected override void PopulateCore()
@@ -183,19 +101,6 @@ namespace MikuMikuModel.Nodes.Sprites
 
         public SpriteNode( string name, Sprite data ) : base( name, data )
         {
-        }
-
-        public override Control Control
-        {
-            get
-            {
-                var spriteSetNode = FindParent<SpriteSetNode>();
-                var spriteSet = spriteSetNode.Data;
-                Bitmap cropped = SpriteCropper.Crop( Data, spriteSet );
-
-                SpriteViewControl.Instance.SetBitmap( cropped );
-                return SpriteViewControl.Instance;
-            }
         }
     }
 }

@@ -16,9 +16,9 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.mMainSplitContainer = new System.Windows.Forms.SplitContainer();
             this.mRightSplitContainer = new System.Windows.Forms.SplitContainer();
-            this.mNodeTreeView = new MikuMikuModel.Nodes.Wrappers.NodeTreeView();
             this.mPropertyGrid = new System.Windows.Forms.PropertyGrid();
             this.mMenuStrip = new System.Windows.Forms.MenuStrip();
             this.mFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -28,18 +28,13 @@
             this.mCloseToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mToolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.mExitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.editToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.mUndoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.mRedoToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mConfigurationsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.mHelpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mToolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mCombineMotsFileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
-            this.mGenerateMurmurHashesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.mStylesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.mHelpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mAboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.mPanel = new System.Windows.Forms.Panel();
+            this.mNodeTreeView = new MikuMikuModel.Nodes.Wrappers.NodeTreeView();
             ((System.ComponentModel.ISupportInitialize)(this.mMainSplitContainer)).BeginInit();
             this.mMainSplitContainer.Panel2.SuspendLayout();
             this.mMainSplitContainer.SuspendLayout();
@@ -84,40 +79,24 @@
             this.mRightSplitContainer.SplitterDistance = 181;
             this.mRightSplitContainer.TabIndex = 0;
             // 
-            // mNodeTreeView
-            // 
-            this.mNodeTreeView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.mNodeTreeView.HideSelection = false;
-            this.mNodeTreeView.ImageIndex = 0;
-            this.mNodeTreeView.Location = new System.Drawing.Point(0, 0);
-            this.mNodeTreeView.Name = "mNodeTreeView";
-            this.mNodeTreeView.SelectedImageIndex = 0;
-            this.mNodeTreeView.SelectedNode = null;
-            this.mNodeTreeView.Size = new System.Drawing.Size(260, 181);
-            this.mNodeTreeView.TabIndex = 0;
-            this.mNodeTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.OnAfterSelect);
-            // 
             // mPropertyGrid
             // 
             this.mPropertyGrid.Dock = System.Windows.Forms.DockStyle.Fill;
             this.mPropertyGrid.HelpVisible = false;
             this.mPropertyGrid.Location = new System.Drawing.Point(0, 0);
             this.mPropertyGrid.Name = "mPropertyGrid";
-            this.mPropertyGrid.PropertySort = System.Windows.Forms.PropertySort.Categorized;
+            this.mPropertyGrid.PropertySort = System.Windows.Forms.PropertySort.NoSort;
             this.mPropertyGrid.Size = new System.Drawing.Size(260, 212);
             this.mPropertyGrid.TabIndex = 0;
             this.mPropertyGrid.ToolbarVisible = false;
-            this.mPropertyGrid.PropertyValueChanged += new System.Windows.Forms.PropertyValueChangedEventHandler(this.OnPropertyValueChanged);
             // 
             // mMenuStrip
             // 
             this.mMenuStrip.Dock = System.Windows.Forms.DockStyle.Fill;
             this.mMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mFileToolStripMenuItem,
-            this.editToolStripMenuItem,
             this.mConfigurationsToolStripMenuItem,
             this.mToolsToolStripMenuItem,
-            this.mStylesToolStripMenuItem,
             this.mHelpToolStripMenuItem,
             this.mAboutToolStripMenuItem});
             this.mMenuStrip.Location = new System.Drawing.Point(0, 0);
@@ -187,33 +166,6 @@
             this.mExitToolStripMenuItem.Text = "Exit";
             this.mExitToolStripMenuItem.Click += new System.EventHandler(this.OnExit);
             // 
-            // editToolStripMenuItem
-            // 
-            this.editToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.mUndoToolStripMenuItem,
-            this.mRedoToolStripMenuItem});
-            this.editToolStripMenuItem.Name = "editToolStripMenuItem";
-            this.editToolStripMenuItem.Size = new System.Drawing.Size(39, 21);
-            this.editToolStripMenuItem.Text = "Edit";
-            this.editToolStripMenuItem.DropDownClosed += new System.EventHandler(this.OnEditDropDownClosed);
-            this.editToolStripMenuItem.DropDownOpening += new System.EventHandler(this.OnEditDropDownOpening);
-            // 
-            // mUndoToolStripMenuItem
-            // 
-            this.mUndoToolStripMenuItem.Name = "mUndoToolStripMenuItem";
-            this.mUndoToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Z)));
-            this.mUndoToolStripMenuItem.Size = new System.Drawing.Size(144, 22);
-            this.mUndoToolStripMenuItem.Text = "Undo";
-            this.mUndoToolStripMenuItem.Click += new System.EventHandler(this.OnUndo);
-            // 
-            // mRedoToolStripMenuItem
-            // 
-            this.mRedoToolStripMenuItem.Name = "mRedoToolStripMenuItem";
-            this.mRedoToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Y)));
-            this.mRedoToolStripMenuItem.Size = new System.Drawing.Size(144, 22);
-            this.mRedoToolStripMenuItem.Text = "Redo";
-            this.mRedoToolStripMenuItem.Click += new System.EventHandler(this.OnRedo);
-            // 
             // mConfigurationsToolStripMenuItem
             // 
             this.mConfigurationsToolStripMenuItem.Name = "mConfigurationsToolStripMenuItem";
@@ -221,14 +173,19 @@
             this.mConfigurationsToolStripMenuItem.Text = "Configurations";
             this.mConfigurationsToolStripMenuItem.Click += new System.EventHandler(this.OnConfigurations);
             // 
+            // mHelpToolStripMenuItem
+            // 
+            this.mHelpToolStripMenuItem.Name = "mHelpToolStripMenuItem";
+            this.mHelpToolStripMenuItem.Size = new System.Drawing.Size(44, 21);
+            this.mHelpToolStripMenuItem.Text = "Help";
+            this.mHelpToolStripMenuItem.Click += new System.EventHandler(this.OnHelp);
+            // 
             // mToolsToolStripMenuItem
             // 
             this.mToolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.mCombineMotsFileToolStripMenuItem,
-            this.toolStripSeparator1,
-            this.mGenerateMurmurHashesToolStripMenuItem});
+            this.mCombineMotsFileToolStripMenuItem});
             this.mToolsToolStripMenuItem.Name = "mToolsToolStripMenuItem";
-            this.mToolsToolStripMenuItem.Size = new System.Drawing.Size(46, 21);
+            this.mToolsToolStripMenuItem.Size = new System.Drawing.Size(47, 21);
             this.mToolsToolStripMenuItem.Text = "Tools";
             // 
             // mCombineMotsFileToolStripMenuItem
@@ -237,31 +194,6 @@
             this.mCombineMotsFileToolStripMenuItem.Size = new System.Drawing.Size(264, 22);
             this.mCombineMotsFileToolStripMenuItem.Text = "Combine divided .mot files into one";
             this.mCombineMotsFileToolStripMenuItem.Click += new System.EventHandler(this.OnCombineMotions);
-            // 
-            // toolStripSeparator1
-            // 
-            this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(261, 6);
-            // 
-            // mGenerateMurmurHashesToolStripMenuItem
-            // 
-            this.mGenerateMurmurHashesToolStripMenuItem.Name = "mGenerateMurmurHashesToolStripMenuItem";
-            this.mGenerateMurmurHashesToolStripMenuItem.Size = new System.Drawing.Size(264, 22);
-            this.mGenerateMurmurHashesToolStripMenuItem.Text = "Generate murmur hashes";
-            this.mGenerateMurmurHashesToolStripMenuItem.Click += new System.EventHandler(this.OnGenerateMurmurHashes);
-            // 
-            // mStylesToolStripMenuItem
-            // 
-            this.mStylesToolStripMenuItem.Name = "mStylesToolStripMenuItem";
-            this.mStylesToolStripMenuItem.Size = new System.Drawing.Size(49, 21);
-            this.mStylesToolStripMenuItem.Text = "Styles";
-            // 
-            // mHelpToolStripMenuItem
-            // 
-            this.mHelpToolStripMenuItem.Name = "mHelpToolStripMenuItem";
-            this.mHelpToolStripMenuItem.Size = new System.Drawing.Size(44, 21);
-            this.mHelpToolStripMenuItem.Text = "Help";
-            this.mHelpToolStripMenuItem.Click += new System.EventHandler(this.OnHelp);
             // 
             // mAboutToolStripMenuItem
             // 
@@ -279,6 +211,19 @@
             this.mPanel.Size = new System.Drawing.Size(736, 25);
             this.mPanel.TabIndex = 1;
             // 
+            // mNodeTreeView
+            // 
+            this.mNodeTreeView.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.mNodeTreeView.HideSelection = false;
+            this.mNodeTreeView.ImageIndex = 0;
+            this.mNodeTreeView.Location = new System.Drawing.Point(0, 0);
+            this.mNodeTreeView.Name = "mNodeTreeView";
+            this.mNodeTreeView.SelectedImageIndex = 0;
+            this.mNodeTreeView.SelectedNode = null;
+            this.mNodeTreeView.Size = new System.Drawing.Size(260, 181);
+            this.mNodeTreeView.TabIndex = 0;
+            this.mNodeTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.OnAfterSelect);
+            // 
             // MainForm
             // 
             this.AllowDrop = true;
@@ -287,10 +232,9 @@
             this.ClientSize = new System.Drawing.Size(736, 440);
             this.Controls.Add(this.mPanel);
             this.Controls.Add(this.mMainSplitContainer);
-            this.DoubleBuffered = true;
-            this.KeyPreview = true;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainForm";
-            this.Text = typeof(MikuMikuModel.Program).Name;
+            this.Text = "Miku Miku Model";
             this.mMainSplitContainer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.mMainSplitContainer)).EndInit();
             this.mMainSplitContainer.ResumeLayout(false);
@@ -327,11 +271,5 @@
         private System.ComponentModel.IContainer components;
         private System.Windows.Forms.ToolStripMenuItem mToolsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem mCombineMotsFileToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem mStylesToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem mGenerateMurmurHashesToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem editToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem mUndoToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem mRedoToolStripMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
     }
 }

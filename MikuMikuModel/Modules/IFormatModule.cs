@@ -1,34 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 
 namespace MikuMikuModel.Modules
 {
-    [Flags]
-    public enum FormatExtensionFlags
-    {
-        Import = 1 << 0,
-        Export = 1 << 1
-    }
-
-    public class FormatExtension
-    {
-        public string Name { get; }
-        public string Extension { get; }
-        public FormatExtensionFlags Flags { get; }
-
-        public FormatExtension( string name, string extension, FormatExtensionFlags flags )
-        {
-            Name = name;
-            Extension = extension;
-            Flags = flags;
-        }
-    }
-
     public interface IFormatModule
     {
+        FormatModuleFlags Flags { get; }
         Type ModelType { get; }
-        IReadOnlyList<FormatExtension> Extensions { get; }
+
+        string Name { get; }
+        string[] Extensions { get; }
 
         object Import( string filePath );
         object Import( Stream source, string fileName = null );
@@ -38,5 +19,12 @@ namespace MikuMikuModel.Modules
 
         bool Match( string fileName );
         bool Match( byte[] buffer );
+    }
+
+    [Flags]
+    public enum FormatModuleFlags
+    {
+        Import = 1 << 0,
+        Export = 1 << 1,
     }
 }

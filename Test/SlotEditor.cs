@@ -70,25 +70,30 @@ namespace Test
             di.Create();
             di = new System.IO.DirectoryInfo(@str + @"MZZZ\rom\skin_param");
             di.Create();
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_gm_module_tbl\gm_module_id.bin", modules.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_gm_customize_item_id\gm_customize_item_id.bin", cstmItems.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\mikitm_tbl.txt", mikTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\hakitm_tbl.txt", hakTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\kaiitm_tbl.txt", kaiTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\lenitm_tbl.txt", lenTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\mikitm_tbl.txt", mikTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\lukitm_tbl.txt", lukTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\meiitm_tbl.txt", meiTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\neritm_tbl.txt", nerTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\rinitm_tbl.txt", rinTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\sakitm_tbl.txt", sakTbl.toString(), Encoding.UTF8);
-            System.IO.File.WriteAllLines(@str + @"MZZZ\rom\mdata_chritm_prop\tetitm_tbl.txt", tetTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_gm_module_tbl\gm_module_id.bin", modules.toString(), Encoding.UTF8);
+            FarcPack.Program.Main1(new string[] { @str + @"\MZZZ\rom\mdata_gm_module_tbl" });
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_gm_customize_item_id\gm_customize_item_id.bin", cstmItems.toString(), Encoding.UTF8);
+            FarcPack.Program.Main1(new string[] { @str + @"\MZZZ\rom\mdata_gm_customize_item_id" });
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\mikitm_tbl.txt", mikTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\hakitm_tbl.txt", hakTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\kaiitm_tbl.txt", kaiTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\lenitm_tbl.txt", lenTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\mikitm_tbl.txt", mikTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\lukitm_tbl.txt", lukTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\meiitm_tbl.txt", meiTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\neritm_tbl.txt", nerTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\rinitm_tbl.txt", rinTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\sakitm_tbl.txt", sakTbl.toString(), Encoding.UTF8);
+            System.IO.File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\tetitm_tbl.txt", tetTbl.toString(), Encoding.UTF8);
+            FarcPack.Program.Main1(new string[] { @str + @"\MZZZ\rom\mdata_chritm_prop"});
             System.IO.File.WriteAllLines(@str + @"MZZZ\rom\objset\mdata_obj_db.xml", objdb.toString(), Encoding.UTF8);
+            DatabaseConverter.Program.Main1(new string[] { @str + @"MZZZ\rom\objset\mdata_obj_db.xml" });
             System.IO.File.WriteAllLines(@str + @"MZZZ\rom\2d\mdata_spr_db.xml", sprdb.toString(), Encoding.UTF8);
+            DatabaseConverter.Program.Main1(new string[] { @str + @"MZZZ\rom\2d\mdata_spr_db.xml" });
         }
         public void addBaseModuleWithNewBody(String charactor,String name)
         {
-            copyModuleWithNewBody(charactor, 1,name);
+            copyModuleWithNewBody(charactor, 1 , name);
         }
         public void copyModuleWithNewBody(int moduleId,String name)
         {
@@ -98,7 +103,7 @@ namespace Test
             mb.id = modules.lastModuleId + 1;
             mb.sort_index = modules.lastSortIndex + 1;
             if (name.Equals("")) mb.name = mb.name + " NEW";
-            else mb.name =mb.name + name;
+            else mb.name =mb.name +" "+ name;
             int oriCosId =StringCut.cosString2Id(mb.cos);
             mb.cos = StringCut.cosId2String(chaTbl.lastCosId + 1);
             modules.add(mb);
@@ -111,6 +116,8 @@ namespace Test
             chaTbl.addCos(newCos);
             //新增身体
             copyItemByNo(mb.chara,bodyno);
+            //更新缩略图
+            sprdb.addMD(mb.id);
         }
         public void copyModuleWithNewBody(String charactor,int bodyId,String name)
         {
