@@ -1,5 +1,7 @@
-A fork of * [MikuMikuLibrary](https://github.com/blueskythlikesclouds/MikuMikuLibrary)
+A fork of [MikuMikuLibrary](https://github.com/blueskythlikesclouds/MikuMikuLibrary)
+Added method to edit model slots
 # Special thanks
+* [blueskythlikesclouds](https://github.com/blueskythlikesclouds/MikuMikuLibrary)
 * [Brolijah](https://github.com/Brolijah)
 * [chrrox](https://www.deviantart.com/chrrox)
 * [korenkonder](https://github.com/korenkonder)
