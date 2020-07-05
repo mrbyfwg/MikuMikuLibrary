@@ -11,10 +11,7 @@ namespace MikuMikuLibrary.Misc
 
         public Color( float r, float g, float b, float a )
         {
-            R = r;
-            G = g;
-            B = b;
-            A = a;
+            R = r; G = g; B = b; A = a;
         }
 
         public override int GetHashCode()
@@ -28,14 +25,9 @@ namespace MikuMikuLibrary.Misc
             }
         }
 
-        public override string ToString()
-        {
-            return $"<{R}, {G}, {B}, {A}>";
-        }
+        public override string ToString() => $"<{R}, {G}, {B}, {A}>";
 
-        public bool Equals( Color other )
-        {
-            return other.R == R && other.G == G && other.B == B && other.A == A;
-        }
+        public bool Equals( Color other ) =>
+            other.R == R && other.G == G && other.B == B && other.A == A;
     }
 }

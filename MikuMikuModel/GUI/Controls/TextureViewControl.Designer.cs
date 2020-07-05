@@ -23,7 +23,7 @@
             this.mStatusStrip.SuspendLayout();
             this.SuspendLayout();
             // 
-            // mStatusStrip
+            // statusStrip
             // 
             this.mStatusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mFormatLabel,
@@ -31,36 +31,36 @@
             this.mMipMapLabel,
             this.mLevelLabel});
             this.mStatusStrip.Location = new System.Drawing.Point(0, 340);
-            this.mStatusStrip.Name = "mStatusStrip";
+            this.mStatusStrip.Name = "statusStrip";
             this.mStatusStrip.Size = new System.Drawing.Size(538, 22);
             this.mStatusStrip.SizingGrip = false;
             this.mStatusStrip.TabIndex = 0;
             this.mStatusStrip.Text = "statusStrip1";
             // 
-            // mFormatLabel
+            // formatLabel
             // 
-            this.mFormatLabel.Name = "mFormatLabel";
+            this.mFormatLabel.Name = "formatLabel";
             this.mFormatLabel.Size = new System.Drawing.Size(130, 17);
             this.mFormatLabel.Spring = true;
             this.mFormatLabel.Text = "Format";
             // 
-            // mSizeLabel
+            // sizeLabel
             // 
-            this.mSizeLabel.Name = "mSizeLabel";
+            this.mSizeLabel.Name = "sizeLabel";
             this.mSizeLabel.Size = new System.Drawing.Size(130, 17);
             this.mSizeLabel.Spring = true;
             this.mSizeLabel.Text = "Size";
             // 
-            // mMipMapLabel
+            // mipMapLabel
             // 
-            this.mMipMapLabel.Name = "mMipMapLabel";
+            this.mMipMapLabel.Name = "mipMapLabel";
             this.mMipMapLabel.Size = new System.Drawing.Size(130, 17);
             this.mMipMapLabel.Spring = true;
             this.mMipMapLabel.Text = "MipMap";
             // 
-            // mLevelLabel
+            // levelLabel
             // 
-            this.mLevelLabel.Name = "mLevelLabel";
+            this.mLevelLabel.Name = "levelLabel";
             this.mLevelLabel.Size = new System.Drawing.Size(130, 17);
             this.mLevelLabel.Spring = true;
             this.mLevelLabel.Text = "Level";
@@ -70,7 +70,6 @@
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.mStatusStrip);
-            this.DoubleBuffered = true;
             this.Name = "TextureViewControl";
             this.Size = new System.Drawing.Size(538, 362);
             this.mStatusStrip.ResumeLayout(false);

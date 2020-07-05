@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using MikuMikuLibrary.Archives;
+using MikuMikuLibrary.Archives.Farc;
 using MikuMikuLibrary.IO;
 using MikuMikuModel.Modules;
 using MikuMikuModel.Nodes.IO;
@@ -20,14 +21,12 @@ namespace MikuMikuModel.Nodes.Archives
 
         public override Bitmap Image => ResourceStore.LoadBitmap( "Icons/Archive.png" );
 
-        [Category( "General" )]
         public int Alignment
         {
             get => GetProperty<int>();
             set => SetProperty( value );
         }
-
-        [Category( "General" )]
+        
         [DisplayName( "Enable compression" )]
         public bool IsCompressed
         {
@@ -37,10 +36,10 @@ namespace MikuMikuModel.Nodes.Archives
 
         protected override void Initialize()
         {
-            AddImportHandler<Stream>( filePath => Data.Add( Path.GetFileName( filePath ), filePath ) );
-            AddExportHandler<FarcArchive>( filePath => Data.Save( filePath ) );
-            AddReplaceHandler<FarcArchive>( BinaryFile.Load<FarcArchive> );
-            AddCustomHandler( "Export All", () =>
+            RegisterImportHandler<Stream>( filePath => Data.Add( Path.GetFileName( filePath ), filePath ) );
+            RegisterExportHandler<FarcArchive>( filePath => Data.Save( filePath ) );
+            RegisterReplaceHandler<FarcArchive>( BinaryFile.Load<FarcArchive> );
+            RegisterCustomHandler( "Export All", () =>
             {
                 using ( var folderBrowseDialog = new VistaFolderBrowserDialog() )
                 {
@@ -64,17 +63,15 @@ namespace MikuMikuModel.Nodes.Archives
         {
             foreach ( string handle in Data )
             {
-                var module = ModuleImportUtilities.GetModule( handle, () => Data.Open( handle, EntryStreamMode.OriginalStream ) );
+                var module = ModuleImportUtilities.GetModule( handle,
+                    () => Data.Open( handle, EntryStreamMode.OriginalStream ) );
 
-                INode node;
-                
-                if ( module != null && typeof( IBinaryFile ).IsAssignableFrom( module.ModelType ) && NodeFactory.NodeTypes.ContainsKey( module.ModelType ) )
-                    node = NodeFactory.Create( module.ModelType, handle, new Func<Stream>( () => Data.Open( handle, EntryStreamMode.MemoryStream ) ) );
-
-                else
-                    node = new StreamNode( handle, Data.Open( handle, EntryStreamMode.OriginalStream ) );
-
-                Nodes.Add( node );
+                Nodes.Add(
+                    module != null && typeof( IBinaryFile ).IsAssignableFrom( module.ModelType ) &&
+                    NodeFactory.NodeTypes.ContainsKey( module.ModelType )
+                        ? NodeFactory.Create( module.ModelType, handle,
+                            new Func<Stream>( () => Data.Open( handle, EntryStreamMode.MemoryStream ) ) )
+                        : new StreamNode( handle, Data.Open( handle, EntryStreamMode.OriginalStream ) ) );
             }
         }
 
@@ -93,23 +90,11 @@ namespace MikuMikuModel.Nodes.Archives
                 }
             }
 
-            foreach ( string entryName in Data.Entries.Except( Nodes.Select( x => x.Name ), StringComparer.InvariantCultureIgnoreCase ).ToList() )
-                Data.Remove( entryName );
-        }
-
-        protected override void OnExport( string filePath )
-        {
-            foreach ( var node in Nodes )
+            foreach ( string entryName in Data.Entries.Except( Nodes.Select( x => x.Name ),
+                StringComparer.InvariantCultureIgnoreCase ).ToList() )
             {
-                if ( !( node.Data is Stream stream ) )
-                    continue;
-
-                stream.Close();
-
-                node.Replace( Data.Open( node.Name, EntryStreamMode.OriginalStream ) );
+                Data.Remove( entryName );
             }
-
-            base.OnExport( filePath );
         }
 
         public FarcArchiveNode( string name, FarcArchive data ) : base( name, data )

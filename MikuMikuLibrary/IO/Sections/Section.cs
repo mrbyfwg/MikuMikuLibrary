@@ -4,29 +4,28 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using MikuMikuLibrary.IO.Common;
-using MikuMikuLibrary.IO.Sections.Enrs;
 
 namespace MikuMikuLibrary.IO.Sections
 {
     public abstract class Section<T> : ISection where T : new()
     {
         private readonly List<ISection> mSections = new List<ISection>();
-        private T mData;
-        private bool mIsDataProcessed;
-        private bool mIsProcessingData;
+        private T mDataObject;
+        private bool mObjectProcessed;
+        private bool mProcessingObject;
 
-        public T Data
+        public T DataObject
         {
             get
             {
-                if ( !mIsDataProcessed && !mIsProcessingData )
-                    ProcessData();
+                if ( !mObjectProcessed && !mProcessingObject )
+                    ProcessDataObject();
 
-                return mData;
+                return mDataObject;
             }
         }
 
-        object ISection.Data => Data;
+        object ISection.DataObject => DataObject;
 
         public Type DataType => typeof( T );
 
@@ -52,7 +51,7 @@ namespace MikuMikuLibrary.IO.Sections
 
         public virtual AddressSpace AddressSpace { get; set; }
 
-        public BinaryFormat Format => AddressSpace.GetCorrespondingModernFormat();
+        public BinaryFormat Format => BinaryFormatUtilities.GetFormat( AddressSpace );
 
         public EndianBinaryReader Reader { get; private set; }
 
@@ -87,77 +86,6 @@ namespace MikuMikuLibrary.IO.Sections
                 section.Dispose();
         }
 
-        public void ProcessData()
-        {
-            if ( mIsDataProcessed )
-                return;
-
-            mIsProcessingData = true;
-
-            switch ( Mode )
-            {
-                case SectionMode.Read when BaseStream == null || Reader == null:
-                    throw new InvalidOperationException( "Section has not been read yet, cannot process data object" );
-
-                case SectionMode.Read:
-                {
-                    if ( mData == null )
-                        mData = new T();
-
-                    foreach ( var section in mSections )
-                    {
-                        if ( SectionInfo.SubSectionInfos.TryGetValue( section.SectionInfo, out var subSectionInfo ) )
-                            subSectionInfo.ProcessPropertyForReading( section, this );
-                    }
-
-                    Reader.SeekBegin( DataOffset );
-                    {
-                        Read( mData, Reader, DataSize );
-                    }
-                    Reader.SeekBegin( DataOffset + SectionSize );
-
-                    break;
-                }
-
-                case SectionMode.Write when BaseStream == null || Writer == null:
-                    throw new InvalidOperationException( "Data object has not been written yet, cannot process data object" );
-
-                case SectionMode.Write:
-                {
-                    mSections.Clear();
-
-                    if ( IsRelocationTableWorthWriting() )
-                    {
-                        ISection relocationTableSection;
-
-                        var offsets = Writer.OffsetPositions.Select( x => x - Writer.BaseOffset ).ToList();
-
-                        if ( AddressSpace == AddressSpace.Int64 )
-                            relocationTableSection = new RelocationTableSectionInt64( SectionMode.Write, offsets );
-
-                        else
-                            relocationTableSection = new RelocationTableSectionInt32( SectionMode.Write, offsets );
-
-                        mSections.Add( relocationTableSection );
-                    }
-
-                    if ( DataSize > 0 && Writer is EnrsBinaryWriter enrsWriter )
-                        mSections.Add( new EnrsSection( SectionMode.Write, enrsWriter.CreateScopeDescriptors( DataOffset, DataOffset + DataSize ) ) );
-
-                    foreach ( var subSectionInfo in SectionInfo.SubSectionInfos.Values.OrderBy( x => x.Priority ) )
-                        mSections.AddRange( subSectionInfo.ProcessPropertyForWriting( this ) );
-
-                    if ( mSections.Count > 0 )
-                        mSections.Add( new EndOfFileSection( SectionMode.Write, this ) );
-
-                    break;
-                }
-            }
-
-            mIsDataProcessed = true;
-            mIsProcessingData = false;
-        }
-
         private void Read( Stream source, bool skipSignature )
         {
             if ( Mode == SectionMode.Write )
@@ -167,26 +95,23 @@ namespace MikuMikuLibrary.IO.Sections
                 throw new InvalidOperationException( "Section has already been read before" );
 
             BaseStream = source;
-            Reader = new EndianBinaryReader( BaseStream, Encoding.UTF8, Endianness.Little, true );
+            Reader = new EndianBinaryReader( BaseStream, Encoding.UTF8, true, Endianness.LittleEndian );
 
             if ( skipSignature )
-            {
                 Reader.PushBaseOffset( Reader.Position - 4 );
-            }
-
             else
             {
                 Reader.PushBaseOffset();
 
                 string signature = Reader.ReadString( StringBinaryFormat.FixedLength, 4 );
-
                 if ( signature != Signature )
                     throw new InvalidDataException( $"Invalid signature (expected {Signature}, got {signature})" );
             }
 
             SectionSize = Reader.ReadUInt32();
             DataOffset = Reader.BaseOffset + Reader.ReadUInt32();
-            Endianness = Reader.ReadInt32() == 0x18000000 ? Endianness.Big : Endianness.Little;
+            int endiannessFlag = Reader.ReadInt32();
+            Endianness = endiannessFlag == 0x18000000 ? Endianness.BigEndian : Endianness.LittleEndian;
             int depth = Reader.ReadInt32();
             DataSize = Reader.ReadUInt32();
 
@@ -214,9 +139,7 @@ namespace MikuMikuLibrary.IO.Sections
                 }
             }
             else
-            {
                 Reader.SeekBegin( DataOffset + SectionSize );
-            }
 
             if ( AddressSpace == AddressSpace.Int64 )
                 Reader.BaseOffset = DataOffset;
@@ -234,14 +157,11 @@ namespace MikuMikuLibrary.IO.Sections
                 throw new InvalidOperationException( "Section has already been written before" );
 
             BaseStream = destination;
-
-            Writer = IsEnrsWorthWriting()
-                ? new EnrsBinaryWriter( BaseStream, Encoding.UTF8, Endianness.Little, true )
-                : new EndianBinaryWriter( BaseStream, Encoding.UTF8, Endianness.Little, true );
+            Writer = new EndianBinaryWriter( BaseStream, Encoding.UTF8, true, Endianness.LittleEndian );
 
             long headerOffset = Writer.Position;
             {
-                Writer.WriteNulls( 8 * sizeof( uint ) );
+                Writer.WriteNulls( 32 );
             }
 
             DataOffset = Writer.Position;
@@ -253,21 +173,21 @@ namespace MikuMikuLibrary.IO.Sections
                 {
                     Writer.PushStringTable( 16, AlignmentMode.Left, StringBinaryFormat.NullTerminated );
                     {
-                        Write( mData, Writer );
+                        Write( mDataObject, Writer );
                     }
                     Writer.PerformScheduledWrites();
                     Writer.PopStringTablesReversed();
                 }
-                Writer.Endianness = Endianness.Little;
+                Writer.Endianness = Endianness.LittleEndian;
                 Writer.AddressSpace = AddressSpace.Int32;
-                Writer.Align( 16 );
+                Writer.WriteAlignmentPadding( 16 );
             }
 
             DataSize = Writer.Position - DataOffset;
 
-            ProcessData();
+            ProcessDataObject();
             {
-                foreach ( var section in mSections.Where( x => !x.SectionInfo.IsBinaryFile ) )
+                foreach ( var section in mSections.Where( x => !x.SectionInfo.IsBinaryFileType ) )
                 {
                     section.Endianness = Endianness;
                     section.AddressSpace = AddressSpace;
@@ -282,44 +202,85 @@ namespace MikuMikuLibrary.IO.Sections
                 Writer.Write( Signature, StringBinaryFormat.FixedLength, 4 );
                 Writer.Write( ( uint ) SectionSize );
                 Writer.Write( ( uint ) ( DataOffset - headerOffset ) );
-                Writer.Write( Endianness == Endianness.Big ? 0x18000000 : 0x10000000 );
+                Writer.Write( Endianness == Endianness.BigEndian ? 0x18000000 : 0x10000000 );
                 Writer.Write( depth );
                 Writer.Write( ( uint ) DataSize );
             } );
         }
 
-        private bool IsRelocationTableWorthWriting()
+        public void ProcessDataObject()
         {
-            return Writer.OffsetPositions.Count > 0 &&
-                   !Flags.HasFlag( SectionFlags.HasNoRelocationTable ) &&
-                   !( this is EnrsSection ) &&
-                   !( this is EndOfFileSection ) &&
-                   !( this is RelocationTableSectionInt32 ) &&
-                   !( this is RelocationTableSectionInt64 );
+            if ( mObjectProcessed )
+                return;
+
+            mProcessingObject = true;
+
+            switch ( Mode )
+            {
+                case SectionMode.Read when BaseStream == null || Reader == null:
+                    throw new InvalidOperationException( "Section has not been read yet, cannot process data object" );
+                case SectionMode.Read:
+                {
+                    if ( mDataObject == null )
+                        mDataObject = new T();
+
+                    foreach ( var section in mSections )
+                        if ( SectionInfo.SubSectionInfos.TryGetValue( section.SectionInfo, out var subSectionInfo ) )
+                            subSectionInfo.ProcessPropertyForReading( section, this );
+
+                    Reader.SeekBegin( DataOffset );
+                    {
+                        Read( mDataObject, Reader, DataSize );
+                    }
+                    Reader.SeekBegin( DataOffset + SectionSize );
+                    break;
+                }
+
+                case SectionMode.Write when BaseStream == null || Writer == null:
+                    throw new InvalidOperationException(
+                        "Data object has not been written yet, cannot process data object" );
+                case SectionMode.Write:
+                {
+                    mSections.Clear();
+                    if ( Writer.OffsetPositions.Count > 0 && Flags.HasFlag( SectionFlags.HasRelocationTable ) )
+                    {
+                        ISection relocationTableSection;
+
+                        var offsets = Writer.OffsetPositions.Select( x => x - Writer.BaseOffset ).ToList();
+                        if ( AddressSpace == AddressSpace.Int64 )
+                            relocationTableSection = new RelocationTableSectionInt64( SectionMode.Write, offsets );
+                        else
+                            relocationTableSection = new RelocationTableSectionInt32( SectionMode.Write, offsets );
+
+                        mSections.Add( relocationTableSection );
+                    }
+
+                    foreach ( var subSectionInfo in SectionInfo.SubSectionInfos.Values.OrderBy( x => x.Priority ) )
+                        mSections.AddRange( subSectionInfo.ProcessPropertyForWriting( this ) );
+
+                    if ( mSections.Count > 0 )
+                        mSections.Add( new EndOfFileSection( SectionMode.Write, this ) );
+                    break;
+                }
+            }
+
+            mObjectProcessed = true;
+            mProcessingObject = false;
         }
 
-        private bool IsEnrsWorthWriting()
-        {
-            return Endianness == Endianness.Little &&
-                   !( this is EnrsSection ) &&
-                   !( this is EndOfFileSection ) &&
-                   !( this is RelocationTableSectionInt32 ) &&
-                   !( this is RelocationTableSectionInt64 );
-        }
+        protected abstract void Read( T dataObject, EndianBinaryReader reader, long length );
+        protected abstract void Write( T dataObject, EndianBinaryWriter writer );
 
-        protected abstract void Read( T data, EndianBinaryReader reader, long length );
-        protected abstract void Write( T data, EndianBinaryWriter writer );
-
-        protected Section( SectionMode mode, T data = default )
+        protected Section( SectionMode mode, T dataObject = default( T ) )
         {
             var type = GetType();
             SectionInfo = SectionRegistry.GetOrRegisterSectionInfo( type );
 
             Mode = mode;
-            mData = data;
+            mDataObject = dataObject;
 
-            if ( Mode == SectionMode.Write && mData == null )
-                throw new ArgumentNullException( "Data object must be provided in write mode", nameof( data ) );
+            if ( Mode == SectionMode.Write && mDataObject == null )
+                throw new ArgumentNullException( "Data object must be provided in write mode", nameof( dataObject ) );
         }
     }
 }

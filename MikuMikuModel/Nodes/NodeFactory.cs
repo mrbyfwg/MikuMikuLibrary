@@ -21,8 +21,7 @@ namespace MikuMikuModel.Nodes
                 return null;
 
             object[] args = { name, data };
-            return Activator.CreateInstance( nodeType,
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, args, null ) as INode;
+            return Activator.CreateInstance( nodeType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, args, null ) as INode;
         }
 
         public static INode Create<T>( string name, T data )
@@ -31,24 +30,21 @@ namespace MikuMikuModel.Nodes
                 return null;
 
             object[] args = { name, data };
-            return Activator.CreateInstance( nodeType,
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, args, null ) as INode;
+            return Activator.CreateInstance( nodeType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance, null, args, null ) as INode;
         }
 
         public static INode Create( string filePath, IEnumerable<Type> typesToMatch )
         {
             var module = ModuleImportUtilities.GetModule( filePath );
             if ( module == null || !NodeTypes.ContainsKey( module.ModelType ) )
-                throw new InvalidDataException( "File type could not be determined." );
+                return new StreamNode( Path.GetFileName( filePath ), File.OpenRead( filePath ) );
 
             ConfigurationList.Instance.DetermineCurrentConfiguration( filePath );
             return Create( module.ModelType, Path.GetFileName( filePath ), module.Import( filePath ) );
         }
 
-        public static INode Create( string filePath )
-        {
-            return Create( filePath, FormatModuleRegistry.ModelTypes );
-        }
+        public static INode Create( string filePath ) => 
+            Create( filePath, FormatModuleRegistry.ModelTypes );
 
         static NodeFactory()
         {
@@ -60,12 +56,16 @@ namespace MikuMikuModel.Nodes
                 x => typeof( INode ).IsAssignableFrom( x ) && x.IsClass && !x.IsAbstract );
 
             foreach ( var type in types )
+            {
                 for ( var baseType = type.BaseType; baseType != null; baseType = baseType.BaseType )
+                {
                     if ( baseType.IsGenericType && baseType.GetGenericTypeDefinition() == typeof( Node<> ) )
                     {
                         sNodeTypes[ baseType.GetGenericArguments()[ 0 ] ] = type;
                         break;
                     }
+                }
+            }
         }
     }
 }

@@ -13,7 +13,6 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -39,27 +38,23 @@
     <AllowedReferenceRelatedFileExtensions>
         .MikuMikuNiShiteAgeru
     </AllowedReferenceRelatedFileExtensions>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>Resources\Icons\Application.ico</ApplicationIcon>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject>MikuMikuModel.Program</StartupObject>
+    <ApplicationIcon>MikuPoke.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AssimpNet, Version=5.0.0.0, Culture=neutral, PublicKeyToken=0d51b391f59f42a6, processorArchitecture=MSIL">
-      <HintPath>..\packages\AssimpNet.5.0.0-beta1\lib\net40\AssimpNet.dll</HintPath>
+    <Reference Include="AssimpNet, Version=4.1.0.0, Culture=neutral, PublicKeyToken=0d51b391f59f42a6, processorArchitecture=MSIL">
+      <HintPath>..\packages\AssimpNet.4.1.0\lib\net40\AssimpNet.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Ookii.Dialogs.WinForms, Version=1.0.0.0, Culture=neutral, PublicKeyToken=66aa232afad40158, processorArchitecture=MSIL">
-      <HintPath>..\packages\Ookii.Dialogs.WinForms.1.1.0\lib\net45\Ookii.Dialogs.WinForms.dll</HintPath>
+    <Reference Include="Ookii.Dialogs.WinForms, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Ookii.Dialogs.WinForms.1.0.0\lib\net45\Ookii.Dialogs.WinForms.dll</HintPath>
     </Reference>
-    <Reference Include="OpenTK, Version=3.2.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTK.3.2\lib\net20\OpenTK.dll</HintPath>
+    <Reference Include="OpenTK, Version=3.0.1.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenTK.3.0.1\lib\net20\OpenTK.dll</HintPath>
     </Reference>
-    <Reference Include="OpenTK.GLControl, Version=3.1.0.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
-      <HintPath>..\packages\OpenTK.GLControl.3.1.0\lib\net20\OpenTK.GLControl.dll</HintPath>
+    <Reference Include="OpenTK.GLControl, Version=3.0.1.0, Culture=neutral, PublicKeyToken=bad199fe84eb3df4, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenTK.GLControl.3.0.1\lib\net20\OpenTK.GLControl.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -76,65 +71,25 @@
   <ItemGroup>
     <Compile Include="Configurations\Configuration.cs" />
     <Compile Include="Configurations\ConfigurationList.cs" />
-    <Compile Include="GUI\Controls\ModelView\Extensions.cs" />
-    <Compile Include="GUI\Controls\ModelView\IDrawable.cs" />
-    <Compile Include="GUI\Controls\SpriteViewControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="GUI\Controls\SpriteViewControl.Designer.cs">
-      <DependentUpon>SpriteViewControl.cs</DependentUpon>
-    </Compile>
     <Compile Include="GUI\Forms\FarcArchiveViewForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="GUI\Forms\FarcArchiveViewForm.Designer.cs">
       <DependentUpon>FarcArchiveViewForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="GUI\Forms\FirstLaunchForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Forms\FirstLaunchForm.Designer.cs">
-      <DependentUpon>FirstLaunchForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="GUI\Forms\ItemSelectForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Forms\ItemSelectForm.Designer.cs">
-      <DependentUpon>ItemSelectForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="GUI\Forms\TextureSelectForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="GUI\Forms\TextureSelectForm.Designer.cs">
-      <DependentUpon>TextureSelectForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Mementos\CompoundMemento.cs" />
-    <Compile Include="Mementos\MementoStack.cs" />
-    <Compile Include="Mementos\IMemento.cs" />
-    <Compile Include="Mementos\ValueMemento.cs" />
-    <Compile Include="Nodes\IO\StreamNode.cs" />
-    <Compile Include="Nodes\NodeList.cs" />
-    <Compile Include="Nodes\NodeMementos.cs" />
-    <Compile Include="Nodes\TypeConverters\IdTypeConverter.cs" />
-    <Compile Include="Resources\Styles\Style.cs" />
-    <Compile Include="Resources\Styles\StyleColorTable.cs" />
-    <Compile Include="Resources\Styles\StyleHelpers.cs" />
-    <Compile Include="Resources\Styles\StyleSet.cs" />
-    <Compile Include="Resources\Styles\StyleToolStripRenderer.cs" />
-    <Compile Include="Resources\ValueCache.cs" />
     <Compile Include="Modules\Archives\FarcArchiveModule.cs" />
     <Compile Include="Modules\Databases\BoneDatabaseModule.cs" />
     <Compile Include="Modules\Databases\MotionDatabaseModule.cs" />
     <Compile Include="Modules\Databases\ObjectDatabaseModule.cs" />
-    <Compile Include="Modules\Databases\SpriteDatabaseModule.cs" />
+    <Compile Include="Modules\Databases\SpriteSetModule.cs" />
     <Compile Include="Modules\Databases\TextureDatabaseModule.cs" />
     <Compile Include="Modules\FormatModule.cs" />
     <Compile Include="Modules\FormatModuleRegistry.cs" />
     <Compile Include="Modules\IFormatModule.cs" />
     <Compile Include="Modules\Imaging\BitmapModule.cs" />
     <Compile Include="Modules\IO\StreamModule.cs" />
-    <Compile Include="Modules\Objects\AssimpSceneModule.cs" />
-    <Compile Include="Modules\Objects\ObjectSetModule.cs" />
+    <Compile Include="Modules\Models\AssimpSceneModule.cs" />
+    <Compile Include="Modules\Models\ModelModule.cs" />
     <Compile Include="Modules\ModuleExportUtilities.cs" />
     <Compile Include="Modules\ModuleFilterGenerator.cs" />
     <Compile Include="Modules\ModuleImportUtilities.cs" />
@@ -143,26 +98,29 @@
     <Compile Include="Modules\Sprites\SpriteSetModule.cs" />
     <Compile Include="Modules\Textures\TextureModule.cs" />
     <Compile Include="Modules\Textures\TextureSetModule.cs" />
+    <Compile Include="Modules\Xml\XmlDocumentModule.cs" />
     <Compile Include="Nodes\Archives\FarcArchiveNode.cs" />
     <Compile Include="Nodes\Databases\SpriteDatabaseNode.cs" />
     <Compile Include="Nodes\Databases\TextureDatabaseNode.cs" />
     <Compile Include="Nodes\INode.cs" />
     <Compile Include="Nodes\IO\BinaryFileNode.cs" />
     <Compile Include="Nodes\IO\IDirtyNode.cs" />
+    <Compile Include="Nodes\IO\StreamNode.cs" />
     <Compile Include="Nodes\Materials\MaterialNode.cs" />
     <Compile Include="Nodes\Materials\MaterialTextureNode.cs" />
-    <Compile Include="Nodes\Collections\ListNode.cs" />
-    <Compile Include="Nodes\ReferenceNode.cs" />
-    <Compile Include="Nodes\Objects\BoneInfoNode.cs" />
-    <Compile Include="Nodes\Objects\SubMeshNode.cs" />
-    <Compile Include="Nodes\Objects\ObjectNode.cs" />
-    <Compile Include="Nodes\Objects\ObjectSetNode.cs" />
-    <Compile Include="Nodes\Objects\SkinNode.cs" />
-    <Compile Include="Nodes\Objects\MeshNode.cs" />
-    <Compile Include="Nodes\Motions\BoneBindingNode.cs" />
+    <Compile Include="Nodes\Misc\ListNode.cs" />
+    <Compile Include="Nodes\Misc\ReferenceNode.cs" />
+    <Compile Include="Nodes\Models\BoneNode.cs" />
+    <Compile Include="Nodes\Models\ExDataNode.cs" />
+    <Compile Include="Nodes\Models\IndexTableNode.cs" />
+    <Compile Include="Nodes\Models\MeshNode.cs" />
+    <Compile Include="Nodes\Models\ModelNode.cs" />
+    <Compile Include="Nodes\Models\SkinNode.cs" />
+    <Compile Include="Nodes\Models\SubMeshNode.cs" />
+    <Compile Include="Nodes\Motions\KeyControllerNode.cs" />
     <Compile Include="Nodes\Motions\KeySetNode.cs" />
-    <Compile Include="Nodes\Motions\KeyBindingNode.cs" />
-    <Compile Include="Nodes\Motions\MotionBindingNode.cs" />
+    <Compile Include="Nodes\Motions\KeySetVectorNode.cs" />
+    <Compile Include="Nodes\Motions\MotionControllerNode.cs" />
     <Compile Include="Nodes\Motions\MotionNode.cs" />
     <Compile Include="Nodes\Motions\MotionSetNode.cs" />
     <Compile Include="Nodes\Node.cs" />
@@ -183,13 +141,14 @@
       <DependentUpon>ModelViewControl.cs</DependentUpon>
     </Compile>
     <Compile Include="GUI\Controls\ModelView\GLBuffer.cs" />
-    <Compile Include="GUI\Controls\ModelView\GLSubMesh.cs" />
+    <Compile Include="GUI\Controls\ModelView\GLIndexTable.cs" />
     <Compile Include="GUI\Controls\ModelView\GLMaterial.cs" />
-    <Compile Include="GUI\Controls\ModelView\GLObject.cs" />
-    <Compile Include="GUI\Controls\ModelView\GLObjectSet.cs" />
-    <Compile Include="GUI\Controls\ModelView\GLShaderProgram.cs" />
     <Compile Include="GUI\Controls\ModelView\GLMesh.cs" />
+    <Compile Include="GUI\Controls\ModelView\GLModel.cs" />
+    <Compile Include="GUI\Controls\ModelView\GLShaderProgram.cs" />
+    <Compile Include="GUI\Controls\ModelView\GLSubMesh.cs" />
     <Compile Include="GUI\Controls\ModelView\GLTexture.cs" />
+    <Compile Include="GUI\Controls\ModelView\IGLDraw.cs" />
     <Compile Include="GUI\Controls\TextureViewControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -217,10 +176,6 @@
     <EmbeddedResource Include="GUI\Controls\ModelViewControl.resx">
       <DependentUpon>ModelViewControl.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="GUI\Controls\SpriteViewControl.resx">
-      <DependentUpon>SpriteViewControl.cs</DependentUpon>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
     <EmbeddedResource Include="GUI\Controls\TextureViewControl.resx">
       <DependentUpon>TextureViewControl.cs</DependentUpon>
     </EmbeddedResource>
@@ -230,24 +185,19 @@
     <EmbeddedResource Include="GUI\Forms\FarcArchiveViewForm.resx">
       <DependentUpon>FarcArchiveViewForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="GUI\Forms\FirstLaunchForm.resx">
-      <DependentUpon>FirstLaunchForm.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="GUI\Forms\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="GUI\Forms\ItemSelectForm.resx">
-      <DependentUpon>ItemSelectForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="GUI\Forms\TextureSelectForm.resx">
-      <DependentUpon>TextureSelectForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <None Include="OpenTK.dll.config" />
-    <None Include="packages.config" />
     <None Include="Resources\Shaders\Default.frag">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Resources\Shaders\Default.vert">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\Shaders\DefaultBasic.frag">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\Shaders\DefaultBasic.vert">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Resources\Shaders\Grid.frag">
@@ -256,6 +206,8 @@
     <None Include="Resources\Shaders\Grid.vert">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="OpenTK.dll.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -267,13 +219,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\Icons\Application.ico">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="MikuPoke.ico" />
     <Content Include="Resources\Icons\Motion.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\Styles\Dark.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="Resources\Icons\TextureSet.png">
@@ -288,10 +235,10 @@
     <None Include="Resources\Icons\Material.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Resources\Icons\ObjectSet.png">
+    <None Include="Resources\Icons\Model.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Resources\Icons\Object.png">
+    <None Include="Resources\Icons\Mesh.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Resources\Icons\File.png">
@@ -327,11 +274,11 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets" Condition="Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" />
+  <Import Project="..\packages\AssimpNet.4.1.0\build\AssimpNet.targets" Condition="Exists('..\packages\AssimpNet.4.1.0\build\AssimpNet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\AssimpNet.5.0.0-beta1\build\AssimpNet.targets'))" />
+    <Error Condition="!Exists('..\packages\AssimpNet.4.1.0\build\AssimpNet.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\AssimpNet.4.1.0\build\AssimpNet.targets'))" />
   </Target>
 </Project>

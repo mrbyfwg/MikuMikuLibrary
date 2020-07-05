@@ -1,29 +1,30 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using MikuMikuLibrary.IO;
+﻿using MikuMikuLibrary.IO;
 using MikuMikuLibrary.IO.Common;
 using MikuMikuLibrary.IO.Sections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace MikuMikuLibrary.Databases
 {
-    public class AetInfo
+    public class AetEntry
     {
-        public uint Id { get; set; }
+        public ushort Id { get; set; }
         public string Name { get; set; }
         public ushort Index { get; set; }
     }
 
-    public class AetSetInfo
+    public class AetSetEntry
     {
-        public uint Id { get; set; }
+        public ushort Id { get; set; }
         public string Name { get; set; }
         public string FileName { get; set; }
-        public uint SpriteSetId { get; set; }
-        public List<AetInfo> Aets { get; }
+        public ushort SpriteSetId { get; set; }
+        public List<AetEntry> Aets { get; }
 
-        public AetSetInfo()
+        public AetSetEntry()
         {
-            Aets = new List<AetInfo>();
+            Aets = new List<AetEntry>();
         }
     }
 
@@ -32,7 +33,7 @@ namespace MikuMikuLibrary.Databases
         public override BinaryFileFlags Flags =>
             BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat;
 
-        public List<AetSetInfo> AetSets { get; }
+        public List<AetSetEntry> AetSets { get; }
 
         public override void Read( EndianBinaryReader reader, ISection section = null )
         {
@@ -44,21 +45,27 @@ namespace MikuMikuLibrary.Databases
             reader.ReadAtOffset( aetSetsOffset, () =>
             {
                 AetSets.Capacity = aetSetCount;
-
                 for ( int i = 0; i < aetSetCount; i++ )
                 {
-                    uint id = reader.ReadUInt32();
+                    ushort id = reader.ReadUInt16();
+                    reader.SeekCurrent( 2 );
+
                     string name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
                     string fileName = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
-                    int index = reader.ReadInt32();
-                    uint spriteSetId = reader.ReadUInt32();
 
-                    AetSets.Add( new AetSetInfo
+                    ushort index = reader.ReadUInt16();
+                    reader.SeekCurrent( 2 );
+                    Debug.Assert( index == i );
+
+                    ushort spriteSetId = reader.ReadUInt16();
+                    reader.SeekCurrent( 2 );
+
+                    AetSets.Add( new AetSetEntry
                     {
                         Id = id,
                         Name = name,
                         FileName = fileName,
-                        SpriteSetId = spriteSetId
+                        SpriteSetId = spriteSetId,
                     } );
                 }
             } );
@@ -67,21 +74,22 @@ namespace MikuMikuLibrary.Databases
             {
                 for ( int i = 0; i < aetCount; i++ )
                 {
-                    uint id = reader.ReadUInt32();
+                    ushort id = reader.ReadUInt16();
+                    reader.SeekCurrent( 2 );
+
                     string name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated );
 
-                    int info = reader.ReadInt32();
-                    ushort index = ( ushort ) ( info & 0xFFFF );
-                    ushort setIndex = ( ushort ) ( ( info >> 16 ) & 0xFFFF );
+                    ushort index = reader.ReadUInt16();
+                    ushort setIndex = reader.ReadUInt16();
 
-                    var aetInfo = new AetInfo
+                    var aetEntry = new AetEntry
                     {
                         Id = id,
                         Name = name,
-                        Index = index
+                        Index = index,
                     };
 
-                    AetSets[ setIndex ].Aets.Add( aetInfo );
+                    AetSets[ setIndex ].Aets.Add( aetEntry );
                 }
             } );
         }
@@ -93,12 +101,15 @@ namespace MikuMikuLibrary.Databases
             {
                 for ( int i = 0; i < AetSets.Count; i++ )
                 {
-                    var aetSetInfo = AetSets[ i ];
-                    writer.Write( aetSetInfo.Id );
-                    writer.AddStringToStringTable( aetSetInfo.Name );
-                    writer.AddStringToStringTable( aetSetInfo.FileName );
-                    writer.Write( i );
-                    writer.Write( aetSetInfo.SpriteSetId );
+                    var aetSetEntry = AetSets[ i ];
+                    writer.Write( aetSetEntry.Id );
+                    writer.WriteNulls( 2 );
+                    writer.AddStringToStringTable( aetSetEntry.Name );
+                    writer.AddStringToStringTable( aetSetEntry.FileName );
+                    writer.Write( ( ushort )i );
+                    writer.WriteNulls( 2 );
+                    writer.Write( aetSetEntry.SpriteSetId );
+                    writer.WriteNulls( 2 );
                 }
             } );
             writer.Write( AetSets.Sum( x => x.Aets.Count ) );
@@ -106,13 +117,14 @@ namespace MikuMikuLibrary.Databases
             {
                 for ( int i = 0; i < AetSets.Count; i++ )
                 {
-                    var aetSetInfo = AetSets[ i ];
-
-                    foreach ( var aetInfo in aetSetInfo.Aets )
+                    var aetSetEntry = AetSets[ i ];
+                    foreach ( var aetEntry in aetSetEntry.Aets )
                     {
-                        writer.Write( aetInfo.Id );
-                        writer.AddStringToStringTable( aetInfo.Name );
-                        writer.Write( ( i << 16 ) | aetInfo.Index );
+                        writer.Write( aetEntry.Id );
+                        writer.WriteNulls( 2 );
+                        writer.AddStringToStringTable( aetEntry.Name );
+                        writer.Write( aetEntry.Index );
+                        writer.Write( ( ushort )i );
                     }
                 }
             } );
@@ -120,7 +132,7 @@ namespace MikuMikuLibrary.Databases
 
         public AetDatabase()
         {
-            AetSets = new List<AetSetInfo>();
+            AetSets = new List<AetSetEntry>();
         }
     }
 }

@@ -8,25 +8,23 @@ namespace MikuMikuLibrary.IO.Sections
 {
     public class SectionInfo
     {
-        private readonly Dictionary<SectionInfo, SubSectionInfo> mSubSectionInfos =
-            new Dictionary<SectionInfo, SubSectionInfo>();
+        private readonly Dictionary<SectionInfo, SubSectionInfo> mSubSectionInfos = new Dictionary<SectionInfo, SubSectionInfo>();
 
         public Type SectionType { get; }
         public string Signature { get; }
         public Type DataType { get; }
-        public bool IsBinaryFile { get; }
+        public bool IsBinaryFileType { get; }
 
         public IReadOnlyDictionary<SectionInfo, SubSectionInfo> SubSectionInfos => mSubSectionInfos;
 
-        public ISection Create( SectionMode mode, object obj = null ) => 
-            ( ISection ) Activator.CreateInstance( SectionType, mode, obj );
+        public ISection Create( SectionMode mode, object obj = null ) =>
+            ( ISection )Activator.CreateInstance( SectionType, mode, obj );
 
         internal SectionInfo( Type sectionType )
         {
             SectionType = sectionType;
 
             var attribute = sectionType.GetCustomAttribute<SectionAttribute>();
-
             if ( attribute == null )
                 throw new ArgumentException( "Section type is missing section attribute", nameof( sectionType ) );
 
@@ -35,7 +33,6 @@ namespace MikuMikuLibrary.IO.Sections
             for ( var type = sectionType.BaseType; type != null; type = type.BaseType )
             {
                 var genericTypeDefinition = type.GetGenericTypeDefinition();
-
                 if ( type.IsGenericType && type.GetGenericTypeDefinition() == typeof( Section<> ) )
                 {
                     DataType = type.GetGenericArguments()[ 0 ];
@@ -46,12 +43,11 @@ namespace MikuMikuLibrary.IO.Sections
             if ( DataType == null )
                 DataType = attribute.DataType;
 
-            IsBinaryFile = typeof( IBinaryFile ).IsAssignableFrom( DataType );
+            IsBinaryFileType = typeof( IBinaryFile ).IsAssignableFrom( DataType );
 
             foreach ( var propertyInfo in sectionType.GetProperties() )
             {
                 var subSectionAttribute = propertyInfo.GetCustomAttribute<SubSectionAttribute>();
-
                 if ( subSectionAttribute == null )
                     continue;
 
@@ -67,15 +63,11 @@ namespace MikuMikuLibrary.IO.Sections
         public string Signature { get; }
         public Type DataType { get; }
 
-        public SectionAttribute( string signature )
-        {
+        public SectionAttribute( string signature ) =>
             Signature = signature;
-        }
 
-        public SectionAttribute( string signature, Type dataType ) : this( signature )
-        {
+        public SectionAttribute( string signature, Type dataType ) : this( signature ) =>
             DataType = dataType;
-        }
     }
 
     public class SubSectionInfo
@@ -91,12 +83,10 @@ namespace MikuMikuLibrary.IO.Sections
             if ( IsListType )
             {
                 var list = PropertyInfo.GetValue( obj ) as IList;
-                list.Add( IsSectionType ? section : section.Data );
+                list.Add( IsSectionType ? section : section.DataObject );
             }
             else
-            {
-                PropertyInfo.SetValue( obj, IsSectionType ? section : section.Data );
-            }
+                PropertyInfo.SetValue( obj, IsSectionType ? section : section.DataObject );
         }
 
         public IEnumerable<ISection> ProcessPropertyForWriting( object obj )
@@ -108,16 +98,20 @@ namespace MikuMikuLibrary.IO.Sections
                 {
                     var list = value as IList;
                     if ( IsSectionType )
+                    {
                         foreach ( var item in list )
-                            yield return ( ISection ) item;
+                            yield return ( ISection )item;
+                    }
                     else
+                    {
                         foreach ( var item in list )
                             yield return SectionInfo.Create( SectionMode.Write, item );
+                    }
                 }
                 else
                 {
                     if ( IsSectionType )
-                        yield return ( ISection ) value;
+                        yield return ( ISection )value;
                     else
                         yield return SectionInfo.Create( SectionMode.Write, value );
                 }
@@ -169,15 +163,10 @@ namespace MikuMikuLibrary.IO.Sections
         public int Priority { get; }
         public Type SectionType { get; }
 
-        public SubSectionAttribute( [CallerLineNumber] int priority = int.MaxValue )
-        {
+        public SubSectionAttribute( [CallerLineNumber]int priority = int.MaxValue ) =>
             Priority = priority;
-        }
 
-        public SubSectionAttribute( Type sectionType, [CallerLineNumber] int priority = int.MaxValue ) 
-            : this( priority )
-        {
+        public SubSectionAttribute( Type sectionType, [CallerLineNumber]int priority = int.MaxValue ) : this( priority ) =>
             SectionType = sectionType;
-        }
     }
 }

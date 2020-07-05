@@ -6,12 +6,12 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-
+using FarcPack;
 namespace Test
 {
     class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             SlotEditor se = new SlotEditor();
             se.copyModuleWithNewBody(431,"");

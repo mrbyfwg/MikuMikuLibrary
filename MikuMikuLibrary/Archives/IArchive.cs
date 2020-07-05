@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using MikuMikuLibrary.IO;
+using System.Collections.Generic;
 using System.IO;
-using MikuMikuLibrary.IO;
 
 namespace MikuMikuLibrary.Archives
 {

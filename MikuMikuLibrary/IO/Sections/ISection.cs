@@ -1,7 +1,7 @@
-﻿using System;
+﻿using MikuMikuLibrary.IO.Common;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using MikuMikuLibrary.IO.Common;
 
 namespace MikuMikuLibrary.IO.Sections
 {
@@ -11,7 +11,7 @@ namespace MikuMikuLibrary.IO.Sections
         EndianBinaryReader Reader { get; }
         Stream BaseStream { get; }
         EndianBinaryWriter Writer { get; }
-        object Data { get; }
+        object DataObject { get; }
         long DataOffset { get; }
         long DataSize { get; }
         Type DataType { get; }
@@ -24,23 +24,20 @@ namespace MikuMikuLibrary.IO.Sections
         long SectionSize { get; }
         string Signature { get; }
 
-        void ProcessData();
+        void ProcessDataObject();
         void Read( Stream source );
         void Read( Stream source, bool skipSignature );
         void Write( Stream destination );
         void Write( Stream destination, int depth );
     }
 
-    public enum SectionMode
-    {
-        Read,
-        Write
-    }
+    public enum SectionMode { Read, Write };
 
     [Flags]
     public enum SectionFlags
     {
         None = 0,
-        HasNoRelocationTable = 1
-    }
+        HasRelocationTable = 1 << 0,
+        HasEndianReverseTable = 1 << 1,
+    };
 }

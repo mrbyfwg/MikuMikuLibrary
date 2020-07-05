@@ -1,18 +1,6 @@
-﻿using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Drawing;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Windows.Forms;
-using System.Xml.Serialization;
 using MikuMikuLibrary.Materials;
-using MikuMikuLibrary.Textures;
-using MikuMikuModel.GUI.Controls;
-using MikuMikuModel.GUI.Forms;
-using MikuMikuModel.Mementos;
-using MikuMikuModel.Nodes.Objects;
 using MikuMikuModel.Nodes.TypeConverters;
 using MikuMikuModel.Resources;
 
@@ -20,294 +8,198 @@ namespace MikuMikuModel.Nodes.Materials
 {
     public class MaterialTextureNode : Node<MaterialTexture>
     {
-        private static readonly XmlSerializer sSerializer = new XmlSerializer( typeof( MaterialTexture ) );
-
-        public override NodeFlags Flags => NodeFlags.Rename;
+        public override NodeFlags Flags => NodeFlags.None;
         public override Bitmap Image => ResourceStore.LoadBitmap( "Icons/MaterialTexture.png" );
 
-        public override Control Control
-        {
-            get
-            {
-                var textureSetNode = FindParent<ObjectSetNode>()?.FindNode<INode>( "Texture Set", true );
-                var texture = (( TextureSet ) textureSetNode?.Data)?.Textures.FirstOrDefault( x => x.Id == TextureId );
-
-                if ( texture == null )
-                    return null;
-
-                TextureViewControl.Instance.SetTexture( texture );
-                return TextureViewControl.Instance;
-            }
-        }
-
-        [Category( "General" )]
-        [DisplayName( "Sampler flags" )]
-        [TypeConverter( typeof( UInt32HexTypeConverter ) )]
-        public uint SamplerFlags
-        {
-            get => GetProperty<uint>();
-            set => SetProperty( value );
-        }
-
-        [Category( "General" )]
         [DisplayName( "Texture id" )]
-        [TypeConverter( typeof( IdTypeConverter ) )]
-        public uint TextureId
+        public int TextureId
         {
-            get => GetProperty<uint>();
+            get => GetProperty<int>();
             set => SetProperty( value );
         }
 
-        [Category( "General" )]
-        [DisplayName( "Texture flags" )]
-        [TypeConverter( typeof( UInt32HexTypeConverter ) )]
-        public uint TextureFlags
+        [DisplayName( "Is active" )]
+        public bool IsActive => GetProperty<bool>();
+
+        [TypeConverter( typeof( Int32HexTypeConverter ) )]
+        public int Field00
         {
-            get => GetProperty<uint>();
+            get => GetProperty<int>();
             set => SetProperty( value );
         }
 
-        [Category( "General" )]
-        [DisplayName( "Extra shader name" )]
-        public string ExtraShaderName
+        [TypeConverter( typeof( Int32HexTypeConverter ) )]
+        public int Field01
         {
-            get => GetProperty<string>();
+            get => GetProperty<int>();
             set => SetProperty( value );
         }
 
-        [Category( "General" )]
-        public float Weight
+        [TypeConverter( typeof( Int32HexTypeConverter ) )]
+        public int Field02
+        {
+            get => GetProperty<int>();
+            set => SetProperty( value );
+        }
+
+        public float Field03
         {
             get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "General" )]
-        [DisplayName( "Texture coordinate matrix" )]
-        public Matrix4x4 TextureCoordinateMatrix
+        public float Field04
         {
-            get => GetProperty<Matrix4x4>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Repeat U" )]
-        public bool RepeatU
+        public float Field05
         {
-            get => GetProperty<bool>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Repeat V" )]
-        public bool RepeatV
+        public float Field06
         {
-            get => GetProperty<bool>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Mirror U" )]
-        public bool MirrorU
+        public float Field07
         {
-            get => GetProperty<bool>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Mirror V" )]
-        public bool MirrorV
+        public float Field08
         {
-            get => GetProperty<bool>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Ignore alpha" )]
-        public bool IgnoreAlpha
+        public float Field09
         {
-            get => GetProperty<bool>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        public uint Blend
+        public float Field10
         {
-            get => GetProperty<uint>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Alpha blend" )]
-        public uint AlphaBlend
+        public float Field11
         {
-            get => GetProperty<uint>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        public bool Border
+        public float Field12
         {
-            get => GetProperty<bool>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Clamp to edge" )]
-        public bool ClampToEdge
+        public float Field13
         {
-            get => GetProperty<bool>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        public uint Filter
+        public float Field14
         {
-            get => GetProperty<uint>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Mipmap" )]
-        public uint MipMap
+        public float Field15
         {
-            get => GetProperty<uint>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Mipmap bias" )]
-        public uint MipMapBias
+        public float Field16
         {
-            get => GetProperty<uint>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Sampler flags" )]
-        [DisplayName( "Anisotropic filter" )]
-        public uint AnisotropicFilter
+        public float Field17
         {
-            get => GetProperty<uint>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Texture flags" )]
-        public MaterialTextureType Type
+        public float Field18
         {
-            get => GetProperty<MaterialTextureType>();
-            set
-            {
-                var previousType = Type;
-
-                MementoStack.BeginCompoundMemento();
-                
-                SetProperty( value );
-
-                if ( previousType == Type || Type == MaterialTextureType.None )
-                {
-                    MementoStack.EndCompoundMemento();
-                    return;
-                }
-
-                Name = Enum.GetName( typeof( MaterialTextureType ), Type );
-                Blend = Blend == 0 ? Type == MaterialTextureType.Specular ? 1u : 7 : Blend;
-                Filter = Filter == 0 ? 2 : Filter;
-                MipMap = MipMap == 0 ? 2 : MipMap;
-
-                MementoStack.EndCompoundMemento();
-            }
-        }
-
-        [Category( "Texture flags" )]
-        [DisplayName( "Texture coordinate index" )]
-        public uint TextureCoordinateIndex
-        {
-            get => GetProperty<uint>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        [Category( "Texture flags" )]
-        [DisplayName( "Texture coordinate translation type" )]
-        public MaterialTextureCoordinateTranslationType TextureCoordinateTranslationType
+        public float Field19
         {
-            get => GetProperty<MaterialTextureCoordinateTranslationType>();
+            get => GetProperty<float>();
             set => SetProperty( value );
         }
 
-        public bool PromptTextureSelector( INode node )
+        public float Field20
         {
-            var textureSetNode = node.FindParent<ObjectSetNode>().FindNode<INode>( "Texture Set", true );
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-            if ( textureSetNode == null )
-            {
-                MessageBox.Show( "Could not find a suitable texture set.", Program.Name, MessageBoxButtons.OK, MessageBoxIcon.Error );
-                return false;
-            }
+        public float Field21
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-            using ( var textureSelectForm = new TextureSelectForm( textureSetNode, Type != MaterialTextureType.None ? Type : MaterialTextureType.Color ) )
-            {
-                if ( textureSelectForm.ShowDialog() != DialogResult.OK )
-                    return false;
+        public float Field22
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-                TextureId = textureSelectForm.SelectedTextureNode.Id;
-                Type = textureSelectForm.MaterialTextureType;
+        public float Field23
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-                if ( textureSelectForm.SelectedTextureNode.Data.ArraySize == 6 )
-                {
-                    TextureCoordinateTranslationType = MaterialTextureCoordinateTranslationType.Cube;
+        public float Field24
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-                    if ( Type == MaterialTextureType.Reflection )
-                        Type = MaterialTextureType.EnvironmentCube;
-                }
+        public float Field25
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-                else if ( Type == MaterialTextureType.EnvironmentSphere )
-                {
-                    TextureCoordinateTranslationType = MaterialTextureCoordinateTranslationType.Sphere;
+        public float Field26
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-                    if ( Type == MaterialTextureType.Reflection )
-                        Type = MaterialTextureType.EnvironmentSphere;
-                }
+        public float Field27
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
+        }
 
-                else
-                    TextureCoordinateTranslationType = MaterialTextureCoordinateTranslationType.None;
-            }
-
-            return true;
+        public float Field28
+        {
+            get => GetProperty<float>();
+            set => SetProperty( value );
         }
 
         protected override void Initialize()
         {
-            AddCustomHandler( "Replace", () => PromptTextureSelector( this ) );
-            AddCustomHandlerSeparator();
-            AddCustomHandler( "Copy values", () =>
-            {
-                using ( var stringWriter = new StringWriter( CultureInfo.InvariantCulture ) )
-                {
-                    sSerializer.Serialize( stringWriter, Data );
-                    Clipboard.SetText( stringWriter.ToString() );
-                }
-            }, Keys.Control | Keys.C );
-            AddCustomHandler( "Paste values", () =>
-            {
-                try
-                {
-                    using ( var stringReader = new StringReader( Clipboard.GetText() ) )
-                    {
-                        var materialTexture = ( MaterialTexture ) sSerializer.Deserialize( stringReader );
-
-                        SetProperty( materialTexture.SamplerFlags, nameof( MaterialTexture.SamplerFlags ) );
-                        SetProperty( materialTexture.TextureFlags, nameof( MaterialTexture.TextureFlags ) );
-                        SetProperty( materialTexture.ExtraShaderName, nameof( MaterialTexture.ExtraShaderName ) );
-                        SetProperty( materialTexture.Weight, nameof( MaterialTexture.Weight ) );
-                        SetProperty( materialTexture.TextureCoordinateMatrix, nameof( MaterialTexture.TextureCoordinateMatrix ) );
-                    }
-                }
-                catch
-                {
-                    MessageBox.Show( "There is no valid data to paste.", Program.Name, MessageBoxButtons.OK,
-                        MessageBoxIcon.Error );
-                }
-            }, Keys.Control | Keys.V );
         }
 
         protected override void PopulateCore()

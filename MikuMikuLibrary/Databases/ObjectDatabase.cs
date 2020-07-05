@@ -1,36 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using MikuMikuLibrary.IO;
+﻿using MikuMikuLibrary.IO;
 using MikuMikuLibrary.IO.Common;
 using MikuMikuLibrary.IO.Sections;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MikuMikuLibrary.Databases
 {
-    public class ObjectInfo
+    public class MeshEntry
     {
         public string Name { get; set; }
-        public uint Id { get; set; }
+        public ushort Id { get; set; }
     }
 
-    public class ObjectSetInfo
+    public class ObjectEntry
     {
         public string Name { get; set; }
-        public uint Id { get; set; }
+        public ushort Id { get; set; }
         public string FileName { get; set; }
         public string TextureFileName { get; set; }
         public string ArchiveFileName { get; set; }
-        public List<ObjectInfo> Objects { get; }
+        public List<MeshEntry> Meshes { get; }
 
-        public ObjectInfo GetObjectInfo( string meshName ) => 
-            Objects.FirstOrDefault( x => x.Name.Equals( meshName, StringComparison.OrdinalIgnoreCase ) );
-
-        public ObjectInfo GetObjectInfo( uint meshId ) => 
-            Objects.FirstOrDefault( x => x.Id.Equals( meshId ) );
-
-        public ObjectSetInfo()
+        public MeshEntry GetMesh( string meshName )
         {
-            Objects = new List<ObjectInfo>();
+            return Meshes.FirstOrDefault( x => x.Name.Equals( meshName, StringComparison.OrdinalIgnoreCase ) );
+        }
+
+        public MeshEntry GetMesh( int meshId )
+        {
+            return Meshes.FirstOrDefault( x => x.Id.Equals( meshId ) );
+        }
+
+        public ObjectEntry()
+        {
+            Meshes = new List<MeshEntry>();
         }
     }
 
@@ -39,35 +43,37 @@ namespace MikuMikuLibrary.Databases
         public override BinaryFileFlags Flags =>
             BinaryFileFlags.Load | BinaryFileFlags.Save | BinaryFileFlags.HasSectionFormat;
 
-        public List<ObjectSetInfo> ObjectSets { get; }
+        public List<ObjectEntry> Objects { get; }
+        public int Unknown { get; set; }
 
         public override void Read( EndianBinaryReader reader, ISection section = null )
         {
-            if ( section != null )
-                reader.SeekCurrent( 4 );
-
             int objectCount = reader.ReadInt32();
-            uint maxId = reader.ReadUInt32();
-            long objectsOffset = reader.ReadOffset();
+            Unknown = reader.ReadInt32();
+            uint objectsOffset = reader.ReadUInt32();
             int meshCount = reader.ReadInt32();
-            long meshesOffset = reader.ReadOffset();
+            uint meshesOffset = reader.ReadUInt32();
 
             reader.ReadAtOffset( objectsOffset, () =>
             {
-                ObjectSets.Capacity = objectCount;
-
+                Objects.Capacity = objectCount;
                 for ( int i = 0; i < objectCount; i++ )
                 {
-                    ObjectSets.Add( new ObjectSetInfo
-                    {
-                        Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated ),
-                        Id = reader.ReadUInt32(),
-                        FileName = reader.ReadStringOffset( StringBinaryFormat.NullTerminated ),
-                        TextureFileName = reader.ReadStringOffset( StringBinaryFormat.NullTerminated ),
-                        ArchiveFileName = reader.ReadStringOffset( StringBinaryFormat.NullTerminated )
-                    } );
+                    uint nameOffset = reader.ReadUInt32();
+                    ushort id = reader.ReadUInt16();
+                    reader.SeekCurrent( 2 );
+                    uint fileNameOffset = reader.ReadUInt32();
+                    uint textureFileNameOffset = reader.ReadUInt32();
+                    uint archiveFileNameOffset = reader.ReadUInt32();
+                    reader.SeekCurrent( 16 );
 
-                    reader.SkipNulls( 4 * sizeof( uint ) );
+                    var objectEntry = new ObjectEntry();
+                    objectEntry.Id = id;
+                    objectEntry.Name = reader.ReadStringAtOffset( nameOffset, StringBinaryFormat.NullTerminated );
+                    objectEntry.FileName = reader.ReadStringAtOffset( fileNameOffset, StringBinaryFormat.NullTerminated );
+                    objectEntry.TextureFileName = reader.ReadStringAtOffset( textureFileNameOffset, StringBinaryFormat.NullTerminated );
+                    objectEntry.ArchiveFileName = reader.ReadStringAtOffset( archiveFileNameOffset, StringBinaryFormat.NullTerminated );
+                    Objects.Add( objectEntry );
                 }
             } );
 
@@ -75,89 +81,80 @@ namespace MikuMikuLibrary.Databases
             {
                 for ( int i = 0; i < meshCount; i++ )
                 {
-                    uint id, parentId;
+                    ushort meshId = reader.ReadUInt16();
+                    ushort parentObjectId = reader.ReadUInt16();
+                    uint nameOffset = reader.ReadUInt32();
 
-                    if ( section != null )
-                    {
-                        id = reader.ReadUInt32();
-                        parentId = reader.ReadUInt32();
-                    }
-                    else
-                    {
-                        id = reader.ReadUInt16();
-                        parentId = reader.ReadUInt16();
-                    }
+                    var meshEntry = new MeshEntry();
+                    meshEntry.Id = meshId;
+                    meshEntry.Name = reader.ReadStringAtOffset( nameOffset, StringBinaryFormat.NullTerminated );
 
-                    ObjectSets.First( x => x.Id == parentId ).Objects.Add(
-                        new ObjectInfo
-                        {
-                            Id = id,
-                            Name = reader.ReadStringOffset( StringBinaryFormat.NullTerminated )
-                        } );
+                    var obj = Objects.First( x => x.Id == parentObjectId );
+                    obj.Meshes.Add( meshEntry );
                 }
             } );
         }
 
         public override void Write( EndianBinaryWriter writer, ISection section = null )
         {
-            if ( section != null )
-                writer.Write( 0 );
-
-            writer.Write( ObjectSets.Count );
-            writer.Write( section == null ? ObjectSets.Max( x => x.Id ) : 0 );
+            writer.Write( Objects.Count );
+            writer.Write( Unknown );
             writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
-                foreach ( var objectSetInfo in ObjectSets )
+                foreach ( var objectEntry in Objects )
                 {
-                    writer.AddStringToStringTable( objectSetInfo.Name );
-                    writer.Write( objectSetInfo.Id );
-                    writer.AddStringToStringTable( objectSetInfo.FileName );
-                    writer.AddStringToStringTable( objectSetInfo.TextureFileName );
-                    writer.AddStringToStringTable( objectSetInfo.ArchiveFileName );
-                    writer.WriteNulls( 4 * sizeof( uint ) );
+                    writer.AddStringToStringTable( objectEntry.Name );
+                    writer.Write( objectEntry.Id );
+                    writer.WriteNulls( 2 );
+                    writer.AddStringToStringTable( objectEntry.FileName );
+                    writer.AddStringToStringTable( objectEntry.TextureFileName );
+                    writer.AddStringToStringTable( objectEntry.ArchiveFileName );
+                    writer.WriteNulls( 16 );
                 }
             } );
-            writer.Write( ObjectSets.Sum( x => x.Objects.Count ) );
+            writer.Write( Objects.Sum( x => x.Meshes.Count ) );
             writer.ScheduleWriteOffset( 16, AlignmentMode.Left, () =>
             {
-                foreach ( var objectSetInfo in ObjectSets )
-                foreach ( var objectInfo in objectSetInfo.Objects )
+                foreach ( var objectEntry in Objects )
                 {
-                    if ( section != null )
+                    foreach ( var meshEntry in objectEntry.Meshes )
                     {
-                        writer.Write( objectInfo.Id );
-                        writer.Write( objectSetInfo.Id );
+                        writer.Write( meshEntry.Id );
+                        writer.Write( objectEntry.Id );
+                        writer.AddStringToStringTable( meshEntry.Name );
                     }
-
-                    else
-                    {
-                        writer.Write( ( ushort ) objectInfo.Id );
-                        writer.Write( ( ushort ) objectSetInfo.Id );
-                    }
-
-                    writer.AddStringToStringTable( objectInfo.Name );
                 }
             } );
         }
 
-        public ObjectSetInfo GetObjectSetInfo( string objectName ) => 
-            ObjectSets.FirstOrDefault( x => x.Name.Equals( objectName, StringComparison.OrdinalIgnoreCase ) );
+        public ObjectEntry GetObject( string objectName )
+        {
+            return Objects.FirstOrDefault( x => x.Name.Equals( objectName, StringComparison.OrdinalIgnoreCase ) );
+        }
 
-        public ObjectSetInfo GetObjectSetInfo( uint objectId ) => 
-            ObjectSets.FirstOrDefault( x => x.Id.Equals( objectId ) );
+        public ObjectEntry GetObject( int objectId )
+        {
+            return Objects.FirstOrDefault( x => x.Id.Equals( objectId ) );
+        }
 
-        public ObjectSetInfo GetObjectSetInfoByFileName( string fileName ) => 
-            ObjectSets.FirstOrDefault( x => x.FileName.Equals( fileName, StringComparison.OrdinalIgnoreCase ) );
+        public ObjectEntry GetObjectByFileName( string fileName )
+        {
+            return Objects.FirstOrDefault( x => x.FileName.Equals( fileName, StringComparison.OrdinalIgnoreCase ) );
+        }
 
-        public ObjectInfo GetObjectInfo( string meshName ) => 
-            ObjectSets.SelectMany( x => x.Objects ).FirstOrDefault( x => x.Name.Equals( meshName, StringComparison.OrdinalIgnoreCase ) );
+        public MeshEntry GetMesh( string meshName )
+        {
+            return Objects.SelectMany( x => x.Meshes ).FirstOrDefault( x => x.Name.Equals( meshName, StringComparison.OrdinalIgnoreCase ) );
+        }
 
-        public ObjectInfo GetObjectInfo( uint meshId ) =>
-            ObjectSets.SelectMany( x => x.Objects ).FirstOrDefault( x => x.Id.Equals( meshId ) );
+        public MeshEntry GetMesh( int meshId )
+        {
+            return Objects.SelectMany( x => x.Meshes ).FirstOrDefault( x => x.Id.Equals( meshId ) );
+        }
 
         public ObjectDatabase()
         {
-            ObjectSets = new List<ObjectSetInfo>();
+            Objects = new List<ObjectEntry>();
         }
     }
 }

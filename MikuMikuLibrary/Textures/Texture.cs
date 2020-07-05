@@ -1,41 +1,42 @@
-﻿using System;
+﻿using MikuMikuLibrary.IO.Common;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using MikuMikuLibrary.IO.Common;
 
 namespace MikuMikuLibrary.Textures
 {
-    public class Texture
+    public partial class Texture
     {
-        private SubTexture[ , ] mSubTextures;
+        private SubTexture[,] mSubTextures;
 
-        public uint Id { get; set; }
+        public int Id { get; set; }
         public string Name { get; set; }
 
         public int Width => mSubTextures[ 0, 0 ].Width;
         public int Height => mSubTextures[ 0, 0 ].Height;
         public TextureFormat Format => mSubTextures[ 0, 0 ].Format;
 
-        public bool IsYCbCr => Format == TextureFormat.ATI2 && ArraySize == 1 && MipMapCount == 2;
+        public bool IsYCbCr =>
+            Format == TextureFormat.ATI2 && Depth == 1 && MipMapCount == 2;
 
-        public int ArraySize => mSubTextures.GetLength( 0 );
+        public int Depth => mSubTextures.GetLength( 0 );
         public int MipMapCount => mSubTextures.GetLength( 1 );
 
-        public bool UsesArraySize => ArraySize > 1;
+        public bool UsesDepth => Depth > 1;
         public bool UsesMipMaps => MipMapCount > 1;
 
-        public SubTexture this[ int arrayIndex, int mipMapIndex ] => mSubTextures[ arrayIndex, mipMapIndex ];
+        public SubTexture this[ int level, int mipMapIndex ] => mSubTextures[ level, mipMapIndex ];
         public SubTexture this[ int mipMapIndex ] => mSubTextures[ 0, mipMapIndex ];
 
-        public IEnumerable<SubTexture> EnumerateMipMaps( int arrayIndex = 0 )
+        public IEnumerable<SubTexture> EnumerateMipMaps( int level = 0 )
         {
             for ( int i = 0; i < MipMapCount; i++ )
-                yield return mSubTextures[ arrayIndex, i ];
+                yield return mSubTextures[ level, i ];
         }
 
         public IEnumerable<IEnumerable<SubTexture>> EnumerateLevels()
         {
-            for ( int i = 0; i < ArraySize; i++ )
+            for ( int i = 0; i < Depth; i++ )
                 yield return EnumerateMipMaps( i );
         }
 
@@ -43,25 +44,30 @@ namespace MikuMikuLibrary.Textures
         {
             reader.PushBaseOffset();
 
-            int signature = reader.ReadInt32();
-
+            var signature = reader.ReadInt32();
             if ( signature != 0x04505854 && signature != 0x05505854 )
                 throw new InvalidDataException( "Invalid signature (expected TXP with type 4 or 5)" );
 
             int subTextureCount = reader.ReadInt32();
             int info = reader.ReadInt32();
-
+            
             int mipMapCount = info & 0xFF;
-            int arraySize = ( info >> 8 ) & 0xFF;
+            int depth = ( info >> 8 ) & 0xFF;
 
-            if ( arraySize == 1 && mipMapCount != subTextureCount )
-                mipMapCount = ( byte ) subTextureCount;
+            if ( depth == 1 && mipMapCount != subTextureCount )
+                mipMapCount = ( byte )subTextureCount;
 
-            mSubTextures = new SubTexture[ arraySize, mipMapCount ];
-
-            for ( int i = 0; i < arraySize; i++ )
-            for ( int j = 0; j < mipMapCount; j++ )
-                reader.ReadOffset( () => { mSubTextures[ i, j ] = new SubTexture( reader ); } );
+            mSubTextures = new SubTexture[ depth, mipMapCount ];
+            for ( int i = 0; i < depth; i++ )
+            {
+                for ( int j = 0; j < mipMapCount; j++ )
+                {
+                    reader.ReadOffset( () =>
+                    {
+                        mSubTextures[ i, j ] = new SubTexture( reader );
+                    } );
+                }
+            }
 
             reader.PopBaseOffset();
         }
@@ -69,32 +75,39 @@ namespace MikuMikuLibrary.Textures
         internal void Write( EndianBinaryWriter writer )
         {
             writer.PushBaseOffset();
-            writer.Write( UsesArraySize ? 0x05505854 : 0x04505854 );
-            writer.Write( MipMapCount * ArraySize );
-            writer.Write( MipMapCount | ( ArraySize << 8 ) | 0x01010000 );
-
-            for ( int i = 0; i < ArraySize; i++ )
-            for ( int j = 0; j < MipMapCount; j++ )
+            writer.Write( UsesDepth ? 0x05505854 : 0x04505854 );
+            writer.Write( MipMapCount * Depth );
+            writer.Write( MipMapCount | ( Depth << 8 ) | 0x01010000 );
+            
+            for ( int i = 0; i < Depth; i++ )
             {
-                var subTexture = mSubTextures[ i, j ];
-                writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () => { subTexture.Write( writer ); } );
+                for ( int j = 0; j < MipMapCount; j++ )
+                {
+                    var subTexture = mSubTextures[ i, j ];
+                    writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
+                    {
+                        subTexture.Write( writer );
+                    } );
+                }
             }
-
             writer.PopBaseOffset();
         }
 
-        private void Init( int width, int height, TextureFormat format, int arraySize, int mipMapCount )
+        private void Init( int width, int height, TextureFormat format, int depth, int mipMapCount )
         {
             width = Math.Max( 1, width );
             height = Math.Max( 1, height );
-            arraySize = Math.Max( 1, arraySize );
+            depth = Math.Max( 1, depth );
             mipMapCount = Math.Max( 1, mipMapCount );
 
-            mSubTextures = new SubTexture[ arraySize, mipMapCount ];
-
-            for ( int i = 0; i < arraySize; i++ )
-            for ( int j = 0; j < mipMapCount; j++ )
-                mSubTextures[ i, j ] = new SubTexture( width >> j, height >> j, format, ( uint ) ( i * mipMapCount + j ) );
+            mSubTextures = new SubTexture[ depth, mipMapCount ];
+            for ( int i = 0; i < depth; i++ )
+            {
+                for ( int j = 0; j < mipMapCount; j++ )
+                {
+                    mSubTextures[ i, j ] = new SubTexture( width >> j, height >> j, format, i * mipMapCount + j );
+                }
+            }
         }
 
         internal Texture( EndianBinaryReader reader )
@@ -102,9 +115,9 @@ namespace MikuMikuLibrary.Textures
             Read( reader );
         }
 
-        public Texture( int width, int height, TextureFormat format, int arraySize = 1, int mipMapCount = 1 )
+        public Texture( int width, int height, TextureFormat format, int depth = 1, int mipMapCount = 1 )
         {
-            Init( width, height, format, arraySize, mipMapCount );
+            Init( width, height, format, depth, mipMapCount );
         }
     }
 }

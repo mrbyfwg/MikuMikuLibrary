@@ -1,11 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using MikuMikuLibrary.Databases;
+﻿using MikuMikuLibrary.Databases;
 using MikuMikuLibrary.IO;
 using MikuMikuLibrary.IO.Common;
 using MikuMikuLibrary.IO.Sections;
-using MikuMikuLibrary.IO.Sections.Textures;
+using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace MikuMikuLibrary.Textures
 {
@@ -21,11 +20,10 @@ namespace MikuMikuLibrary.Textures
             reader.PushBaseOffset();
 
             int signature = reader.ReadInt32();
-
             if ( signature != 0x03505854 )
             {
-                reader.Endianness = Endianness = Endianness.Big;
-                signature = EndiannessHelper.Swap( signature );
+                reader.Endianness = Endianness = Endianness.BigEndian;
+                signature = EndiannessSwapUtilities.Swap( signature );
             }
 
             if ( signature != 0x03505854 )
@@ -35,9 +33,13 @@ namespace MikuMikuLibrary.Textures
             int textureCountWithRubbish = reader.ReadInt32();
 
             Textures.Capacity = textureCount;
-
             for ( int i = 0; i < textureCount; i++ )
-                reader.ReadOffset( () => { Textures.Add( new Texture( reader ) ); } );
+            {
+                reader.ReadOffset( () =>
+                {
+                    Textures.Add( new Texture( reader ) );
+                } );
+            }
 
             reader.PopBaseOffset();
         }
@@ -51,62 +53,62 @@ namespace MikuMikuLibrary.Textures
             writer.Write( Textures.Count | 0x01010100 );
 
             foreach ( var texture in Textures )
-                writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () => { texture.Write( writer ); } );
+            {
+                writer.ScheduleWriteOffset( 4, AlignmentMode.Left, () =>
+                {
+                    texture.Write( writer );
+                } );
+            }
 
             writer.PopBaseOffset();
         }
 
-        protected override ISection GetSectionInstanceForWriting() => 
-            new TextureSetSection( SectionMode.Write, this );
+        protected override ISection GetSectionInstanceForWriting() => new TextureSetSection( SectionMode.Write, this );
 
         public override void Load( string filePath )
         {
             base.Load( filePath );
 
-            if ( !filePath.EndsWith( ".txd", StringComparison.OrdinalIgnoreCase ) ) 
-                return;
-
-            var textureDatabase = LoadIfExist<TextureDatabase>( Path.ChangeExtension( filePath, "txi" ) );
-
-            if ( Textures.Count != textureDatabase.Textures.Count ) 
-                return;
-
-            for ( int i = 0; i < Textures.Count; i++ )
+            if ( filePath.EndsWith( ".txd", StringComparison.OrdinalIgnoreCase ) )
             {
-                Textures[ i ].Id = textureDatabase.Textures[ i ].Id;
-                Textures[ i ].Name = textureDatabase.Textures[ i ].Name;
+                var textureDatabase = LoadIfExist<TextureDatabase>( Path.ChangeExtension( filePath, "txi" ) );
+                if ( Textures.Count == textureDatabase.Textures.Count )
+                {
+                    for ( int i = 0; i < Textures.Count; i++ )
+                    {
+                        Textures[ i ].Id = textureDatabase.Textures[ i ].Id;
+                        Textures[ i ].Name = textureDatabase.Textures[ i ].Name;
+                    }
+                }
             }
         }
 
         public override void Save( string filePath )
         {
             // Assume it's being exported for F2nd PS3
-            if ( BinaryFormatUtilities.IsClassic( Format ) &&
-                 filePath.EndsWith( ".txd", StringComparison.OrdinalIgnoreCase ) )
+            if ( BinaryFormatUtilities.IsClassic( Format ) && filePath.EndsWith( ".txd", StringComparison.OrdinalIgnoreCase ) )
             {
                 Format = BinaryFormat.F2nd;
-                Endianness = Endianness.Big;
+                Endianness = Endianness.BigEndian;
             }
 
-            // Or vice versa
-            else if ( BinaryFormatUtilities.IsModern( Format ) &&
-                      filePath.EndsWith( ".bin", StringComparison.OrdinalIgnoreCase ) )
+            // Or reverse
+            else if ( BinaryFormatUtilities.IsModern( Format ) && filePath.EndsWith( ".bin", StringComparison.OrdinalIgnoreCase ) )
             {
                 Format = BinaryFormat.DT;
-                Endianness = Endianness.Little;
+                Endianness = Endianness.LittleEndian;
             }
 
             // Save a TXI if we are modern
             if ( filePath.EndsWith( ".txd", StringComparison.OrdinalIgnoreCase ) )
             {
                 var textureDatabase = new TextureDatabase();
-
                 foreach ( var texture in Textures )
                 {
-                    textureDatabase.Textures.Add( new TextureInfo
+                    textureDatabase.Textures.Add( new TextureEntry
                     {
                         Id = texture.Id,
-                        Name = texture.Name ?? Guid.NewGuid().ToString()
+                        Name = texture.Name ?? $"Texture{texture.Id}",
                     } );
                 }
 

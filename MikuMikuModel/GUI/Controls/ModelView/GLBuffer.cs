@@ -1,12 +1,10 @@
-﻿using System;
-using OpenTK.Graphics.OpenGL;
+﻿using OpenTK.Graphics.OpenGL;
+using System;
 
 namespace MikuMikuModel.GUI.Controls.ModelView
 {
-    public class GLBuffer<T> : IDisposable where T : unmanaged
+    public class GLBuffer<T> : IDisposable where T : struct
     {
-        private bool mDisposed;
-
         public T[] Array { get; }
         public int Id { get; }
         public BufferTarget Target { get; }
@@ -15,28 +13,22 @@ namespace MikuMikuModel.GUI.Controls.ModelView
 
         public int Length => Array.Length;
 
+        public void Bind()
+        {
+            GL.BindBuffer( Target, Id );
+        }
+
         public void Dispose()
         {
             Dispose( true );
             GC.SuppressFinalize( this );
         }
 
-        public void Bind()
-        {
-            GL.BindBuffer( Target, Id );
-        }
-
         protected void Dispose( bool disposing )
         {
-            if ( mDisposed )
-                return;
+            if ( disposing ) { }
 
             GL.DeleteBuffer( Id );
-            GL.Finish();
-
-            GC.RemoveMemoryPressure( Stride * Array.Length );
-
-            mDisposed = true;
         }
 
         ~GLBuffer()
@@ -44,18 +36,16 @@ namespace MikuMikuModel.GUI.Controls.ModelView
             Dispose( false );
         }
 
-        public unsafe GLBuffer( BufferTarget target, T[] array, BufferUsageHint usageHint )
+        public GLBuffer( BufferTarget target, T[] array, int stride, BufferUsageHint usageHint )
         {
             Array = array;
             Id = GL.GenBuffer();
             Target = target;
             UsageHint = usageHint;
-            Stride = sizeof( T );
+            Stride = stride;
 
             GL.BindBuffer( Target, Id );
             GL.BufferData( Target, Length * Stride, Array, UsageHint );
-            
-            GC.AddMemoryPressure( Stride * Array.Length );
         }
     }
 }

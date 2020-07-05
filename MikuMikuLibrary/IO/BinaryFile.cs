@@ -1,10 +1,11 @@
-﻿using System;
+﻿using MikuMikuLibrary.IO.Common;
+using MikuMikuLibrary.IO.Sections;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
 using MikuMikuLibrary.Cryptography;
-using MikuMikuLibrary.IO.Common;
-using MikuMikuLibrary.IO.Sections;
+using MikuMikuLibrary.Exceptions;
 
 namespace MikuMikuLibrary.IO
 {
@@ -16,6 +17,31 @@ namespace MikuMikuLibrary.IO
         public abstract BinaryFileFlags Flags { get; }
         public virtual BinaryFormat Format { get; set; }
         public virtual Endianness Endianness { get; set; }
+
+        public static T Load<T>( Stream source, bool leaveOpen = false ) where T : IBinaryFile, new()
+        {
+            var instance = new T();
+            instance.Load( source, leaveOpen );
+            return instance;
+        }
+
+        public static T Load<T>( string filePath ) where T : IBinaryFile, new()
+        {
+            var instance = new T();
+            instance.Load( filePath );
+            return instance;
+        }
+
+        public static T LoadIfExist<T>( string filePath ) where T : IBinaryFile, new()
+        {
+            var instance = new T();
+
+            if ( string.IsNullOrEmpty( filePath ) || !File.Exists( filePath ) )
+                return instance;
+
+            instance.Load( filePath );
+            return instance;
+        }
 
         public void Load( Stream source, bool leaveOpen = false )
         {
@@ -39,7 +65,6 @@ namespace MikuMikuLibrary.IO
                 var stream = source;
 
                 var bytes = new byte[ 4 ];
-
                 string ReadSignature()
                 {
                     stream.Read( bytes, 0, bytes.Length );
@@ -49,13 +74,11 @@ namespace MikuMikuLibrary.IO
                 long current = source.Position;
                 {
                     string signature = ReadSignature();
-
                     if ( signature == "DIVA" )
                     {
                         string signatureOtherHalf = ReadSignature();
-
                         if ( signatureOtherHalf != "FILE" )
-                            throw new InvalidDataException( $"Invalid signature (expected DIVAFILE)" );
+                            throw new InvalidSignatureException( $"{signature}{signatureOtherHalf}", "DIVAFILE" );
 
                         stream = DivafileDecryptor.DecryptToMemoryStream( source, true, true );
                         signature = ReadSignature();
@@ -78,13 +101,12 @@ namespace MikuMikuLibrary.IO
 
                                     if ( siblingSection is EndOfFileSection )
                                         break;
-
                                     if ( section.SectionInfo.SubSectionInfos.TryGetValue( sectionInfo, out var subSectionInfo ) )
                                         subSectionInfo.ProcessPropertyForReading( siblingSection, section );
                                 }
                             }
 
-                            section.ProcessData();
+                            section.ProcessDataObject();
                         }
 
                         return true;
@@ -95,13 +117,12 @@ namespace MikuMikuLibrary.IO
                 }
 
                 source.Seek( current, SeekOrigin.Begin );
-
                 return false;
             }
 
             void ReadClassic()
             {
-                using ( var reader = new EndianBinaryReader( source, Encoding.UTF8, Endianness, true ) )
+                using ( var reader = new EndianBinaryReader( source, Encoding.UTF8, true, Endianness ) )
                 {
                     reader.PushBaseOffset();
                     {
@@ -116,7 +137,18 @@ namespace MikuMikuLibrary.IO
             if ( !Flags.HasFlag( BinaryFileFlags.Load ) )
                 throw new NotSupportedException( "Binary file is not able to load" );
 
-            Load( File.OpenRead( filePath ) );
+            Load( File.OpenRead( filePath ), false );
+        }
+
+        public void LoadIfExist( string filePath )
+        {
+            if ( !Flags.HasFlag( BinaryFileFlags.Load ) )
+                throw new NotSupportedException( "Binary file is not able to load" );
+
+            if ( string.IsNullOrEmpty( filePath ) || !File.Exists( filePath ) )
+                return;
+
+            Load( filePath );
         }
 
         public void Save( Stream destination, bool leaveOpen = false )
@@ -134,14 +166,13 @@ namespace MikuMikuLibrary.IO
             if ( Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) )
             {
                 if ( mOwnsStream )
-                    mStream.Close();
+                    mStream.Dispose();
 
                 mStream = destination;
                 mOwnsStream = !leaveOpen;
 
                 mStream.Flush();
             }
-
             else if ( !leaveOpen )
             {
                 destination.Close();
@@ -153,17 +184,17 @@ namespace MikuMikuLibrary.IO
                 {
                     section.Write( destination );
 
-                    foreach ( var subSection in section.Sections.Where( x => x.SectionInfo.IsBinaryFile ) )
+                    foreach ( var subSection in section.Sections.Where( x => x.SectionInfo.IsBinaryFileType ) )
                         subSection.Write( destination );
 
-                    using ( var eofSection = new EndOfFileSection( SectionMode.Write, this ) ) 
+                    using ( var eofSection = new EndOfFileSection( SectionMode.Write, this ) )
                         eofSection.Write( destination );
                 }
             }
 
             void WriteClassic()
             {
-                using ( var writer = new EndianBinaryWriter( destination, Encoding.UTF8, Endianness, true ) )
+                using ( var writer = new EndianBinaryWriter( destination, Encoding.UTF8, true, Endianness ) )
                 {
                     writer.PushBaseOffset();
                     {
@@ -198,7 +229,7 @@ namespace MikuMikuLibrary.IO
                     } while ( File.Exists( thisFilePath ) );
 
                     using ( var destination = File.Create( thisFilePath ) )
-                        Save( destination );
+                        Save( destination, false );
 
                     fileStream.Close();
 
@@ -212,52 +243,7 @@ namespace MikuMikuLibrary.IO
                 }
             }
 
-            Save( new FileStream( filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite ) );
-        }
-
-        public void Dispose()
-        {
-            Dispose( true );
-            GC.SuppressFinalize( this );
-        }
-
-        public abstract void Read( EndianBinaryReader reader, ISection section = null );
-        public abstract void Write( EndianBinaryWriter writer, ISection section = null );
-
-        public static T Load<T>( Stream source, bool leaveOpen = false ) where T : IBinaryFile, new()
-        {
-            var instance = new T();
-            instance.Load( source, leaveOpen );
-            return instance;
-        }
-
-        public static T Load<T>( string filePath ) where T : IBinaryFile, new()
-        {
-            var instance = new T();
-            instance.Load( filePath );
-            return instance;
-        }
-
-        public static T LoadIfExist<T>( string filePath ) where T : IBinaryFile, new()
-        {
-            var instance = new T();
-
-            if ( string.IsNullOrEmpty( filePath ) || !File.Exists( filePath ) )
-                return instance;
-
-            instance.Load( filePath );
-            return instance;
-        }
-
-        public void LoadIfExist( string filePath )
-        {
-            if ( !Flags.HasFlag( BinaryFileFlags.Load ) )
-                throw new NotSupportedException( "Binary file is not able to load" );
-
-            if ( string.IsNullOrEmpty( filePath ) || !File.Exists( filePath ) )
-                return;
-
-            Load( filePath );
+            Save( new FileStream( filePath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite ), false );
         }
 
         protected virtual ISection GetSectionInstanceForWriting()
@@ -270,19 +256,28 @@ namespace MikuMikuLibrary.IO
             return sectionInfo.Create( SectionMode.Write, this );
         }
 
+        public void Dispose()
+        {
+            Dispose( true );
+            GC.SuppressFinalize( this );
+        }
+
         /// <summary>
-        ///     Cleans up resources used by the object.
+        /// Cleans up resources used by the object.
         /// </summary>
-        /// <param name="disposing">Whether the managed objects are going to be disposed.</param>
+        /// <param name="disposing">Whether or not the managed objects are going to be disposed.</param>
         protected virtual void Dispose( bool disposing )
         {
             if ( disposing && Flags.HasFlag( BinaryFileFlags.UsesSourceStream ) && mOwnsStream )
-                mStream?.Close();
+                mStream?.Dispose();
         }
 
         ~BinaryFile()
         {
             Dispose( false );
         }
+
+        public abstract void Read( EndianBinaryReader reader, ISection section = null );
+        public abstract void Write( EndianBinaryWriter writer, ISection section = null );
     }
 }

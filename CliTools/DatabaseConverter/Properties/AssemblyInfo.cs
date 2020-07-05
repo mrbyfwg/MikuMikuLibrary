@@ -5,13 +5,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle( "Database Converter" )]
-[assembly:
-    AssemblyDescription(
-        "A program that converts database files from Hatsune Miku: Project DIVA games to .xml or vice versa." )]
+[assembly: AssemblyDescription( "A program that converts database files from Hatsune Miku: Project DIVA games to .xml or vice versa." )]
 [assembly: AssemblyConfiguration( "" )]
 [assembly: AssemblyCompany( "" )]
 [assembly: AssemblyProduct( "Database Converter" )]
-[assembly: AssemblyCopyright( "Copyright © 2020 Skyth (MIT License)" )]
+[assembly: AssemblyCopyright( "Copyright © 2019 Skyth" )]
 [assembly: AssemblyTrademark( "" )]
 [assembly: AssemblyCulture( "" )]
 

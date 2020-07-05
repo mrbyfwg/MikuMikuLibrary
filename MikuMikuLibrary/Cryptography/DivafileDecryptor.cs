@@ -2,6 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using MikuMikuLibrary.Exceptions;
 using MikuMikuLibrary.IO.Common;
 
 namespace MikuMikuLibrary.Cryptography
@@ -19,7 +20,7 @@ namespace MikuMikuLibrary.Cryptography
             BlockSize = 128,
             Mode = CipherMode.ECB,
             Padding = PaddingMode.Zeros,
-            IV = new byte[ 16 ]
+            IV = new byte[ 16 ],
         };
 
         public static void ReadHeader( Stream source, bool skipSignature, out uint encryptedSize, out uint unencryptedSize )
@@ -30,9 +31,8 @@ namespace MikuMikuLibrary.Cryptography
             if ( !skipSignature )
             {
                 string signature = Encoding.UTF8.GetString( header, 0, 4 );
-
                 if ( signature != "DIVAFILE" )
-                    throw new InvalidDataException( $"Invalid signature (expected DIVAFILE)" );
+                    throw new InvalidSignatureException( signature, "DIVAFILE" );
             }
 
             int offset = skipSignature ? 0 : 8;
@@ -50,8 +50,7 @@ namespace MikuMikuLibrary.Cryptography
 
             ReadHeader( source, skipSignature, out uint encryptedSize, out _ );
 
-            var streamView = new StreamView( source, source.Position, encryptedSize, true );
-
+            var streamView = source.CreateSubView( source.Position, encryptedSize );
             return new CryptoStream( streamView, decryptor, CryptoStreamMode.Read );
         }
 
@@ -60,11 +59,10 @@ namespace MikuMikuLibrary.Cryptography
         {
             var memoryStream = new MemoryStream();
 
-            using ( var cryptoStream = CreateDecryptorStream( source, readHeader, skipSignature ) ) 
+            using ( var cryptoStream = CreateDecryptorStream( source, readHeader, skipSignature ) )
                 cryptoStream.CopyTo( memoryStream );
 
             memoryStream.Seek( 0, SeekOrigin.Begin );
-
             return memoryStream;
         }
     }

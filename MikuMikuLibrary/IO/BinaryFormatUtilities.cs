@@ -4,14 +4,56 @@ namespace MikuMikuLibrary.IO
 {
     public static class BinaryFormatUtilities
     {
-        public static bool IsClassic( BinaryFormat format ) => 
-            format <= BinaryFormat.FT;
+        public static bool IsClassic( BinaryFormat format )
+        {
+            switch ( format )
+            {
+                case BinaryFormat.DT:
+                case BinaryFormat.F:
+                case BinaryFormat.FT:
+                    return true;
 
-        public static bool IsModern( BinaryFormat format ) => 
-            format >= BinaryFormat.F2nd;
+                case BinaryFormat.F2nd:
+                case BinaryFormat.X:
+                    return false;
+            }
 
-        public static AddressSpace GetAddressSpace( BinaryFormat format ) => 
-            format == BinaryFormat.X ? AddressSpace.Int64 : AddressSpace.Int32;
+            throw new ArgumentException( nameof( format ) );
+        }
+
+        public static bool IsModern( BinaryFormat format )
+        {
+            switch ( format )
+            {
+                case BinaryFormat.DT:
+                case BinaryFormat.F:
+                case BinaryFormat.FT:
+                    return false;
+
+                case BinaryFormat.F2nd:
+                case BinaryFormat.X:
+                    return true;
+            }
+
+            throw new ArgumentException( nameof( format ) );
+        }
+
+        public static AddressSpace GetAddressSpace( BinaryFormat format )
+        {
+            switch ( format )
+            {
+                case BinaryFormat.DT:
+                case BinaryFormat.F:
+                case BinaryFormat.FT:
+                case BinaryFormat.F2nd:
+                    return AddressSpace.Int32;
+
+                case BinaryFormat.X:
+                    return AddressSpace.Int64;
+            }
+
+            throw new ArgumentException( nameof( format ) );
+        }
 
         public static BinaryFormat GetFormat( AddressSpace addressSpace ) => 
             addressSpace == AddressSpace.Int64 ? BinaryFormat.X : BinaryFormat.F2nd;

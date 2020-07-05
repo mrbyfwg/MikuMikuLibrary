@@ -6,7 +6,7 @@ namespace MikuMikuLibrary.IO
 {
     public enum Endianness
     {
-        Little,
-        Big
+        LittleEndian,
+        BigEndian
     }
 }

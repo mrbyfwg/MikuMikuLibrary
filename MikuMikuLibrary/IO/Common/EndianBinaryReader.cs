@@ -2,16 +2,15 @@
 // Taken and modified from: https://github.com/TGEnigma/Amicitia //
 //===============================================================//
 
+using MikuMikuLibrary.Exceptions;
+using MikuMikuLibrary.Maths;
+using MikuMikuLibrary.Misc;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Text;
-using MikuMikuLibrary.Geometry;
-using MikuMikuLibrary.Misc;
 
 namespace MikuMikuLibrary.IO.Common
 {
@@ -19,7 +18,9 @@ namespace MikuMikuLibrary.IO.Common
     {
         private StringBuilder mStringBuilder;
         private Endianness mEndianness;
+        private bool mSwap;
         private Encoding mEncoding;
+        private AddressSpace mAddressSpace;
         private Stack<long> mOffsets;
         private Stack<long> mBaseOffsets;
 
@@ -28,14 +29,18 @@ namespace MikuMikuLibrary.IO.Common
             get => mEndianness;
             set
             {
-                SwapBytes = value != EndiannessHelper.SystemEndianness;
+                mSwap = value != EndiannessSwapUtilities.SystemEndianness;
                 mEndianness = value;
             }
         }
 
-        public bool SwapBytes { get; private set; }
+        public bool SwapBytes => mSwap;
 
-        public AddressSpace AddressSpace { get; set; }
+        public AddressSpace AddressSpace
+        {
+            get => mAddressSpace;
+            set => mAddressSpace = value;
+        }
 
         public long Position
         {
@@ -55,94 +60,58 @@ namespace MikuMikuLibrary.IO.Common
             }
         }
 
-        public void Seek( long offset, SeekOrigin origin ) => 
-            BaseStream.Seek( offset, origin );
+        public void Seek( long offset, SeekOrigin origin ) => BaseStream.Seek( offset, origin );
+        public void SeekBegin( long offset ) => BaseStream.Seek( offset, SeekOrigin.Begin );
+        public void SeekCurrent( long offset ) => BaseStream.Seek( offset, SeekOrigin.Current );
+        public void SeekEnd( long offset ) => BaseStream.Seek( offset, SeekOrigin.End );
 
-        public void SeekBegin( long offset ) => 
-            BaseStream.Seek( offset, SeekOrigin.Begin );
+        public void PushOffset( long offset ) => mOffsets.Push( offset );
+        public void PushOffset() => mOffsets.Push( Position );
+        public long PeekOffset() => mOffsets.Peek();
+        public long PopOffset() => mOffsets.Pop();
+        public long SeekBeginToPoppedOffset() => BaseStream.Seek( mOffsets.Pop(), SeekOrigin.Begin );
 
-        public void SeekCurrent( long offset ) => 
-            BaseStream.Seek( offset, SeekOrigin.Current );
+        public void PushBaseOffset( long offset ) => mBaseOffsets.Push( offset );
+        public void PushBaseOffset() => mBaseOffsets.Push( Position );
+        public long PeekBaseOffset() => mBaseOffsets.Peek();
+        public long PopBaseOffset() => mBaseOffsets.Pop();
 
-        public void SeekEnd( long offset ) => 
-            BaseStream.Seek( offset, SeekOrigin.End );
-
-        public void PushOffset( long offset ) => 
-            mOffsets.Push( offset );
-
-        public void PushOffset() => 
-            mOffsets.Push( Position );
-
-        public long PeekOffset() => 
-            mOffsets.Peek();
-
-        public long PopOffset() => 
-            mOffsets.Pop();
-
-        public long SeekBeginToPoppedOffset() => 
-            BaseStream.Seek( mOffsets.Pop(), SeekOrigin.Begin );
-
-        public void PushBaseOffset( long offset ) => 
-            mBaseOffsets.Push( offset );
-
-        public void PushBaseOffset() => 
-            mBaseOffsets.Push( Position );
-
-        public long PeekBaseOffset() => 
-            mBaseOffsets.Peek();
-
-        public long PopBaseOffset() => 
-            mBaseOffsets.Pop();
-
-        public void Align( int alignment ) => 
-            SeekCurrent( AlignmentHelper.GetAlignedDifference( Position, alignment ) );
+        public void Align( int alignment ) => SeekCurrent( AlignmentUtilities.GetAlignedDifference( Position, alignment ) );
 
         public long ReadOffset()
         {
             long offset;
 
-            switch ( AddressSpace )
+            if ( mAddressSpace == AddressSpace.Int32 )
+                offset = ReadUInt32();
+
+            else if ( mAddressSpace == AddressSpace.Int64 )
             {
-                case AddressSpace.Int32:
-                    offset = ReadUInt32();
-                    break;
-
-                case AddressSpace.Int64:
-                    Align( 8 );
-                    offset = ReadInt64();
-                    break;
-
-                default:
-                    throw new ArgumentException( nameof( AddressSpace ) );
+                Align( 8 );
+                offset = ReadInt64();
             }
+
+            else
+                throw new ArgumentException( nameof( mAddressSpace ) );
 
             return offset;
         }
 
         public long[] ReadOffsets( int count )
         {
-            if ( AddressSpace == AddressSpace.Int64 )
+            if ( mAddressSpace == AddressSpace.Int64 )
                 Align( 8 );
 
             var offsets = new long[ count ];
-
             for ( int i = 0; i < count; i++ )
             {
                 long offset;
-
-                switch ( AddressSpace )
-                {
-                    case AddressSpace.Int32:
-                        offset = ReadUInt32();
-                        break;
-
-                    case AddressSpace.Int64:
-                        offset = ReadInt64();
-                        break;
-
-                    default:
-                        throw new ArgumentException( nameof( AddressSpace ) );
-                }
+                if ( mAddressSpace == AddressSpace.Int32 )
+                    offset = ReadUInt32();
+                else if ( mAddressSpace == AddressSpace.Int64 )
+                    offset = ReadInt64();
+                else
+                    throw new ArgumentException( nameof( mAddressSpace ) );
 
                 offsets[ i ] = offset;
             }
@@ -150,70 +119,151 @@ namespace MikuMikuLibrary.IO.Common
             return offsets;
         }
 
+        public void ReadOffset( Action<EndianBinaryReader> action )
+        {
+            long offset = ReadOffset();
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action( this );
+                SeekBegin( current );
+            }
+        }
+
+        public void ReadOffset( int count, Action<EndianBinaryReader, int> action )
+        {
+            long offset = ReadOffset();
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                for ( int i = 0; i < count; i++ )
+                    action( this, i );
+                SeekBegin( current );
+            }
+        }
+
+        public void ReadOffsetIf( bool condition, Action<EndianBinaryReader> action )
+        {
+            long offset = ReadOffset();
+            if ( offset != 0 && condition )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action( this );
+                SeekBegin( current );
+            }
+        }
+
         public void ReadOffset( Action action )
         {
             long offset = ReadOffset();
-            if ( offset == 0 ) 
-                return;
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action();
+                SeekBegin( current );
+            }
+        }
 
-            long current = Position;
-            SeekBegin( BaseOffset + offset );
-            action();
-            SeekBegin( current );
+        public void ReadOffset( int count, Action<int> action )
+        {
+            long offset = ReadOffset();
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                for ( int i = 0; i < count; i++ )
+                    action( i );
+                SeekBegin( current );
+            }
+        }
+
+        public void ReadOffsetIf( bool condition, Action action )
+        {
+            long offset = ReadOffset();
+            if ( offset != 0 && condition )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action();
+                SeekBegin( current );
+            }
+        }
+
+        public void ReadAtOffset( long offset, Action<EndianBinaryReader> action )
+        {
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action( this );
+                SeekBegin( current );
+            }
+        }
+
+        public void ReadAtOffset( long offset, int count, Action<EndianBinaryReader, int> action )
+        {
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                for ( int i = 0; i < count; i++ )
+                    action( this, i );
+                SeekBegin( current );
+            }
+        }
+
+        public void ReadAtOffsetIf( bool condition, long offset, Action<EndianBinaryReader> action )
+        {
+            if ( offset != 0 && condition )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action( this );
+                SeekBegin( current );
+            }
         }
 
         public void ReadAtOffset( long offset, Action action )
         {
-            if ( offset == 0 )
-                return;
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action();
+                SeekBegin( current );
+            }
+        }
 
-            long current = Position;
-
-            SeekBegin( BaseOffset + offset );
-            action();
-            SeekBegin( current );
+        public void ReadAtOffset( long offset, int count, Action<int> action )
+        {
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                for ( int i = 0; i < count; i++ )
+                    action( i );
+                SeekBegin( current );
+            }
         }
 
         public void ReadAtOffsetIf( bool condition, long offset, Action action )
         {
-            if ( offset == 0 || !condition ) 
-                return;
-
-            long current = Position;
-
-            SeekBegin( BaseOffset + offset );
-            action();
-            SeekBegin( current );
-        }
-
-#if DEBUG
-        public void SkipNulls( int length, [CallerLineNumber] int lineNumber = -1, [CallerFilePath] string filePath = null )
-        {
-            long begin = Position;
-
-            for ( int i = 0; i < length; i++ )
+            if ( offset != 0 && condition )
             {
-                if ( ReadByte() == 0 ) continue;
-
-                Debug.WriteLine(
-                    "SkipNulls(): begin: 0x{0:X}, current: 0x{1:X}, line {2} in {3}",
-                    begin, Position - 1, lineNumber, filePath );
-
-                SeekCurrent( length - i - 1 );
-                break;
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                action();
+                SeekBegin( current );
             }
         }
-#else
-        public void SkipNulls( int length )
-        {
-            SeekCurrent( length );
-        }
-#endif
 
         public sbyte[] ReadSBytes( int count )
         {
-            var array = new sbyte[ count ];
-
+            sbyte[] array = new sbyte[ count ];
             for ( int i = 0; i < array.Length; i++ )
                 array[ i ] = ReadSByte();
 
@@ -222,140 +272,197 @@ namespace MikuMikuLibrary.IO.Common
 
         public bool[] ReadBooleans( int count )
         {
-            var array = new bool[ count ];
-
+            bool[] array = new bool[ count ];
             for ( int i = 0; i < array.Length; i++ )
                 array[ i ] = ReadBoolean();
 
             return array;
         }
 
-        public override short ReadInt16() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadInt16() ) : base.ReadInt16();
+        public override short ReadInt16()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadInt16() );
+            else
+                return base.ReadInt16();
+        }
 
         public short[] ReadInt16s( int count )
         {
-            var array = new short[ count ];
-
-            for ( int i = 0; i < array.Length; i++ ) 
+            short[] array = new short[ count ];
+            for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadInt16();
+            }
 
             return array;
         }
 
-        public override ushort ReadUInt16() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadUInt16() ) : base.ReadUInt16();
+        public override ushort ReadUInt16()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadUInt16() );
+            else
+                return base.ReadUInt16();
+        }
 
         public ushort[] ReadUInt16s( int count )
         {
-            var array = new ushort[ count ];
-
-            for ( int i = 0; i < array.Length; i++ ) 
+            ushort[] array = new ushort[ count ];
+            for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadUInt16();
+            }
 
             return array;
         }
 
-        public override decimal ReadDecimal() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadDecimal() ) : base.ReadDecimal();
+        public override decimal ReadDecimal()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadDecimal() );
+            else
+                return base.ReadDecimal();
+        }
 
         public decimal[] ReadDecimals( int count )
         {
-            var array = new decimal[ count ];
-
+            decimal[] array = new decimal[ count ];
             for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadDecimal();
+            }
 
             return array;
         }
 
-        public override double ReadDouble() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadDouble() ) : base.ReadDouble();
+        public override double ReadDouble()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadDouble() );
+            else
+                return base.ReadDouble();
+        }
 
         public double[] ReadDoubles( int count )
         {
-            var array = new double[ count ];
-
-            for ( int i = 0; i < array.Length; i++ ) 
+            double[] array = new double[ count ];
+            for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadDouble();
+            }
 
             return array;
         }
 
-        public override int ReadInt32() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadInt32() ) : base.ReadInt32();
+        public override int ReadInt32()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadInt32() );
+            else
+                return base.ReadInt32();
+        }
 
         public int[] ReadInt32s( int count )
         {
-            var array = new int[ count ];
-
-            for ( int i = 0; i < array.Length; i++ ) 
+            int[] array = new int[ count ];
+            for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadInt32();
+            }
 
             return array;
         }
 
-        public override long ReadInt64() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadInt64() ) : base.ReadInt64();
+        public override long ReadInt64()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadInt64() );
+            else
+                return base.ReadInt64();
+        }
 
         public long[] ReadInt64s( int count )
         {
-            var array = new long[ count ];
-
-            for ( int i = 0; i < array.Length; i++ ) 
+            long[] array = new long[ count ];
+            for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadInt64();
+            }
 
             return array;
         }
 
-        public Half ReadHalf() => 
-            Half.ToHalf( SwapBytes ? EndiannessHelper.Swap( base.ReadUInt16() ) : base.ReadUInt16() );
+        public Half ReadHalf()
+        {
+            if ( mSwap )
+                return Half.ToHalf( EndiannessSwapUtilities.Swap( base.ReadUInt16() ) );
+            else
+                return Half.ToHalf( base.ReadUInt16() );
+        }
 
         public Half[] ReadHalfs( int count )
         {
-            var array = new Half[ count ];
-
+            Half[] array = new Half[ count ];
             for ( int i = 0; i < array.Length; i++ )
                 array[ i ] = ReadHalf();
 
             return array;
         }
 
-        public override float ReadSingle() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadSingle() ) : base.ReadSingle();
+        public override float ReadSingle()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadSingle() );
+            else
+                return base.ReadSingle();
+        }
 
         public float[] ReadSingles( int count )
         {
-            var array = new float[ count ];
-
+            float[] array = new float[ count ];
             for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadSingle();
+            }
 
             return array;
         }
 
-        public override uint ReadUInt32() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadUInt32() ) : base.ReadUInt32();
+        public override uint ReadUInt32()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadUInt32() );
+            else
+                return base.ReadUInt32();
+        }
 
         public uint[] ReadUInt32s( int count )
         {
-            var array = new uint[ count ];
-
+            uint[] array = new uint[ count ];
             for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadUInt32();
+            }
 
             return array;
         }
 
-        public override ulong ReadUInt64() => 
-            SwapBytes ? EndiannessHelper.Swap( base.ReadUInt64() ) : base.ReadUInt64();
+        public override ulong ReadUInt64()
+        {
+            if ( mSwap )
+                return EndiannessSwapUtilities.Swap( base.ReadUInt64() );
+            else
+                return base.ReadUInt64();
+        }
 
         public ulong[] ReadUInt64s( int count )
         {
-            var array = new ulong[ count ];
-
-            for ( int i = 0; i < array.Length; i++ ) 
+            ulong[] array = new ulong[ count ];
+            for ( int i = 0; i < array.Length; i++ )
+            {
                 array[ i ] = ReadUInt64();
+            }
 
             return array;
         }
@@ -367,61 +474,51 @@ namespace MikuMikuLibrary.IO.Common
             switch ( format )
             {
                 case StringBinaryFormat.NullTerminated:
-                {
-                    char b;
-
-                    while ( ( b = ReadChar() ) != 0 )
-                        mStringBuilder.Append( b );
-
-                    break;
-                }
-
-                case StringBinaryFormat.FixedLength:
-                {
-                    if ( fixedLength == -1 )
-                        throw new ArgumentException( "Invalid fixed length specified" );
-
-                    char b;
-
-                    for ( int i = 0; i < fixedLength; i++ )
                     {
-                        b = ReadChar();
-                        if ( b != 0 )
+                        char b;
+                        while ( ( b = ReadChar() ) != 0 )
                             mStringBuilder.Append( b );
                     }
-
                     break;
-                }
+
+                case StringBinaryFormat.FixedLength:
+                    {
+                        if ( fixedLength == -1 )
+                            throw new ArgumentException( "Invalid fixed length specified" );
+
+                        char b;
+                        for ( int i = 0; i < fixedLength; i++ )
+                        {
+                            b = ReadChar();
+                            if ( b != 0 )
+                                mStringBuilder.Append( b );
+                        }
+                    }
+                    break;
 
                 case StringBinaryFormat.PrefixedLength8:
-                {
-                    byte length = ReadByte();
-
-                    for ( int i = 0; i < length; i++ )
-                        mStringBuilder.Append( ReadChar() );
-
+                    {
+                        byte length = ReadByte();
+                        for ( int i = 0; i < length; i++ )
+                            mStringBuilder.Append( ReadChar() );
+                    }
                     break;
-                }
 
                 case StringBinaryFormat.PrefixedLength16:
-                {
-                    ushort length = ReadUInt16();
-
-                    for ( int i = 0; i < length; i++ )
-                        mStringBuilder.Append( ReadChar() );
-
+                    {
+                        ushort length = ReadUInt16();
+                        for ( int i = 0; i < length; i++ )
+                            mStringBuilder.Append( ReadChar() );
+                    }
                     break;
-                }
 
                 case StringBinaryFormat.PrefixedLength32:
-                {
-                    uint length = ReadUInt32();
-
-                    for ( int i = 0; i < length; i++ )
-                        mStringBuilder.Append( ReadChar() );
-
+                    {
+                        uint length = ReadUInt32();
+                        for ( int i = 0; i < length; i++ )
+                            mStringBuilder.Append( ReadChar() );
+                    }
                     break;
-                }
 
                 default:
                     throw new ArgumentException( "Unknown string format", nameof( format ) );
@@ -432,21 +529,20 @@ namespace MikuMikuLibrary.IO.Common
 
         public string PeekString( StringBinaryFormat format, int fixedLength = -1 )
         {
-            string result;
+            string ret;
 
             long current = Position;
             {
-                result = ReadString( format, fixedLength );
+                ret = ReadString( format, fixedLength );
             }
             SeekBegin( current );
 
-            return result;
+            return ret;
         }
 
         public string[] ReadStrings( int count, StringBinaryFormat format, int fixedLength = -1 )
         {
-            var value = new string[ count ];
-
+            string[] value = new string[ count ];
             for ( int i = 0; i < value.Length; i++ )
                 value[ i ] = ReadString( format, fixedLength );
 
@@ -456,34 +552,36 @@ namespace MikuMikuLibrary.IO.Common
         public string ReadStringOffset( StringBinaryFormat format, int fixedLength = -1 )
         {
             long offset = ReadOffset();
-            if ( offset == 0 ) 
-                return null;
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                string value = ReadString( format, fixedLength );
+                SeekBegin( current );
+                return value;
+            }
 
-            long current = Position;
-
-            SeekBegin( BaseOffset + offset );
-            string value = ReadString( format, fixedLength );
-            SeekBegin( current );
-
-            return value;
+            return null;
         }
 
         public string ReadStringAtOffset( long offset, StringBinaryFormat format, int fixedLength = -1 )
         {
-            if ( offset == 0 ) 
-                return null;
+            if ( offset != 0 )
+            {
+                long current = Position;
+                SeekBegin( BaseOffset + offset );
+                string value = ReadString( format, fixedLength );
+                SeekBegin( current );
+                return value;
+            }
 
-            long current = Position;
-
-            SeekBegin( BaseOffset + offset );
-
-            string value = ReadString( format, fixedLength );
-            SeekBegin( current );
-            return value;
+            return null;
         }
 
-        public Vector2 ReadVector2() => 
-            new Vector2( ReadSingle(), ReadSingle() );
+        public Vector2 ReadVector2()
+        {
+            return new Vector2( ReadSingle(), ReadSingle() );
+        }
 
         public Vector2 ReadVector2( VectorBinaryFormat format )
         {
@@ -505,16 +603,17 @@ namespace MikuMikuLibrary.IO.Common
 
         public Vector2[] ReadVector2s( int count )
         {
-            var value = new Vector2[ count ];
-
+            Vector2[] value = new Vector2[ count ];
             for ( int i = 0; i < value.Length; i++ )
                 value[ i ] = ReadVector2();
 
             return value;
         }
 
-        public Vector3 ReadVector3() => 
-            new Vector3( ReadSingle(), ReadSingle(), ReadSingle() );
+        public Vector3 ReadVector3()
+        {
+            return new Vector3( ReadSingle(), ReadSingle(), ReadSingle() );
+        }
 
         public Vector3 ReadVector3( VectorBinaryFormat format )
         {
@@ -533,16 +632,17 @@ namespace MikuMikuLibrary.IO.Common
 
         public Vector3[] ReadVector3s( int count )
         {
-            var value = new Vector3[ count ];
-
+            Vector3[] value = new Vector3[ count ];
             for ( int i = 0; i < value.Length; i++ )
                 value[ i ] = ReadVector3();
 
             return value;
         }
 
-        public Vector4 ReadVector4() => 
-            new Vector4( ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle() );
+        public Vector4 ReadVector4()
+        {
+            return new Vector4( ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle() );
+        }
 
         public Vector4 ReadVector4( VectorBinaryFormat format )
         {
@@ -555,8 +655,7 @@ namespace MikuMikuLibrary.IO.Common
                     return new Vector4( ReadHalf(), ReadHalf(), ReadHalf(), ReadHalf() );
 
                 case VectorBinaryFormat.Int16:
-                    return new Vector4( ReadInt16() / 32768f, ReadInt16() / 32768f, ReadInt16() / 32768f,
-                        ReadInt16() / 32768f );
+                    return new Vector4( ReadInt16() / 32768f, ReadInt16() / 32768f, ReadInt16() / 32768f, ReadInt16() / 32768f );
 
                 default:
                     throw new ArgumentException( nameof( format ) );
@@ -565,8 +664,7 @@ namespace MikuMikuLibrary.IO.Common
 
         public Vector4[] ReadVector4s( int count )
         {
-            var value = new Vector4[ count ];
-
+            Vector4[] value = new Vector4[ count ];
             for ( int i = 0; i < value.Length; i++ )
                 value[ i ] = ReadVector4();
 
@@ -575,38 +673,26 @@ namespace MikuMikuLibrary.IO.Common
 
         public Matrix4x4 ReadMatrix4x4()
         {
-            float m11 = ReadSingle();
-            float m21 = ReadSingle();
-            float m31 = ReadSingle();
-            float m41 = ReadSingle();
-            float m12 = ReadSingle();
-            float m22 = ReadSingle();
-            float m32 = ReadSingle();
-            float m42 = ReadSingle();
-            float m13 = ReadSingle();
-            float m23 = ReadSingle();
-            float m33 = ReadSingle();
-            float m43 = ReadSingle();
-            float m14 = ReadSingle();
-            float m24 = ReadSingle();
-            float m34 = ReadSingle();
-            float m44 = ReadSingle();
-
-            return new Matrix4x4( m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44 );
+            return new Matrix4x4(
+                 ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle(),
+                 ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle(),
+                 ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle(),
+                 ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle() );
         }
 
         public Matrix4x4[] ReadMatrix4x4s( int count )
         {
-            var value = new Matrix4x4[ count ];
-
+            Matrix4x4[] value = new Matrix4x4[ count ];
             for ( int i = 0; i < value.Length; i++ )
                 value[ i ] = ReadMatrix4x4();
 
             return value;
         }
 
-        public Color ReadColor() => 
-            new Color( ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle() );
+        public Color ReadColor()
+        {
+            return new Color( ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle() );
+        }
 
         public Color ReadColor( VectorBinaryFormat format )
         {
@@ -619,8 +705,7 @@ namespace MikuMikuLibrary.IO.Common
                     return new Color( ReadHalf(), ReadHalf(), ReadHalf(), ReadHalf() );
 
                 case VectorBinaryFormat.Int16:
-                    return new Color( ReadInt16() / 32768f, ReadInt16() / 32768f, ReadInt16() / 32768f,
-                        ReadInt16() / 32768f );
+                    return new Color( ReadInt16() / 32768f, ReadInt16() / 32768f, ReadInt16() / 32768f, ReadInt16() / 32768f );
 
                 default:
                     throw new ArgumentException( nameof( format ) );
@@ -629,8 +714,7 @@ namespace MikuMikuLibrary.IO.Common
 
         public Color[] ReadColors( int count )
         {
-            var value = new Color[ count ];
-
+            Color[] value = new Color[ count ];
             for ( int i = 0; i < value.Length; i++ )
                 value[ i ] = ReadColor();
 
@@ -642,7 +726,7 @@ namespace MikuMikuLibrary.IO.Common
             return new BoundingSphere
             {
                 Center = ReadVector3(),
-                Radius = ReadSingle()
+                Radius = ReadSingle(),
             };
         }
 
@@ -653,15 +737,69 @@ namespace MikuMikuLibrary.IO.Common
                 Center = ReadVector3(),
                 Width = ReadSingle(),
                 Height = ReadSingle(),
-                Depth = ReadSingle()
+                Depth = ReadSingle(),
             };
+        }
+
+        public int ReadSignature( int expectedSignature )
+        {
+            int signature = ReadInt32();
+            if ( signature != expectedSignature )
+                throw new InvalidSignatureException( signature, expectedSignature );
+
+            return signature;
+        }
+
+        public int ReadSignature( params int[] expectedSignatures )
+        {
+            int signature = ReadInt32();
+            if ( !expectedSignatures.Contains( signature ) )
+                throw new InvalidSignatureException( signature, expectedSignatures );
+
+            return signature;
+        }
+
+        public int ReadSignature( IEnumerable<int> expectedSignatures )
+        {
+            int signature = ReadInt32();
+            if ( !expectedSignatures.Contains( signature ) )
+                throw new InvalidSignatureException( signature, expectedSignatures );
+
+            return signature;
+        }
+
+        public string ReadSignature( int length, string expectedSignature )
+        {
+            string signature = ReadString( StringBinaryFormat.FixedLength, length );
+            if ( signature != expectedSignature )
+                throw new InvalidSignatureException( signature, expectedSignature );
+
+            return signature;
+        }
+
+        public string ReadSignature( int length, params string[] expectedSignatures )
+        {
+            string signature = ReadString( StringBinaryFormat.FixedLength, length );
+            if ( !expectedSignatures.Contains( signature ) )
+                throw new InvalidSignatureException( signature, expectedSignatures );
+
+            return signature;
+        }
+
+        public string ReadSignature( int length, IEnumerable<string> expectedSignatures )
+        {
+            string signature = ReadString( StringBinaryFormat.FixedLength, length );
+            if ( !expectedSignatures.Contains( signature ) )
+                throw new InvalidSignatureException( signature, expectedSignatures );
+
+            return signature;
         }
 
         private void Init( Encoding encoding, Endianness endianness, AddressSpace addressSpace )
         {
             mStringBuilder = new StringBuilder();
             mEncoding = encoding;
-            AddressSpace = addressSpace;
+            mAddressSpace = addressSpace;
             mOffsets = new Stack<long>();
             mBaseOffsets = new Stack<long>();
             Endianness = endianness;
@@ -691,13 +829,13 @@ namespace MikuMikuLibrary.IO.Common
             Init( encoding, endianness, addressSpace );
         }
 
-        public EndianBinaryReader( Stream input, Encoding encoding, Endianness endianness, bool leaveOpen )
+        public EndianBinaryReader( Stream input, Encoding encoding, bool leaveOpen, Endianness endianness )
             : base( input, encoding, leaveOpen )
         {
             Init( encoding, endianness, AddressSpace.Int32 );
         }
 
-        public EndianBinaryReader( Stream input, Encoding encoding, Endianness endianness, AddressSpace addressSpace, bool leaveOpen )
+        public EndianBinaryReader( Stream input, Encoding encoding, bool leaveOpen, Endianness endianness, AddressSpace addressSpace )
             : base( input, encoding, leaveOpen )
         {
             Init( encoding, endianness, addressSpace );

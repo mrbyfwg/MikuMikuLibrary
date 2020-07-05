@@ -1,14 +1,10 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Windows.Forms;
 using MikuMikuLibrary.Motions;
 using MikuMikuModel.Configurations;
-using MikuMikuModel.Nodes.Collections;
 using MikuMikuModel.Nodes.IO;
-using MikuMikuModel.Nodes.TypeConverters;
+using MikuMikuModel.Nodes.Misc;
 using MikuMikuModel.Resources;
 
 namespace MikuMikuModel.Nodes.Motions
@@ -20,17 +16,9 @@ namespace MikuMikuModel.Nodes.Motions
 
         public override Bitmap Image => ResourceStore.LoadBitmap( "Icons/Motion.png" );
 
-        [Category( "General" )]
-        [DisplayName( "Frame count" )]
-        public ushort FrameCount
-        {
-            get => GetProperty<ushort>();
-            set => SetProperty( value );
-        }
-
         protected override void Initialize()
         {
-            AddReplaceHandler<Motion>( filePath =>
+            RegisterReplaceHandler<Motion>( filePath =>
             {
                 var configuration = ConfigurationList.Instance.CurrentConfiguration;
                 var motion = new Motion();
@@ -39,14 +27,14 @@ namespace MikuMikuModel.Nodes.Motions
                 }
                 return motion;
             } );
-            AddExportHandler<Motion>( filePath =>
+            RegisterExportHandler<Motion>( filePath =>
             {
                 var configuration = ConfigurationList.Instance.CurrentConfiguration;
                 {
                     Data.Save( filePath, configuration?.BoneDatabase?.Skeletons?[ 0 ] );
                 }
             } );
-            AddExportHandler<MotionSet>( filePath =>
+            RegisterExportHandler<MotionSet>( filePath =>
             {
                 using ( var motionSet = new MotionSet() )
                 {
@@ -54,41 +42,37 @@ namespace MikuMikuModel.Nodes.Motions
 
                     var configuration = ConfigurationList.Instance.CurrentConfiguration;
                     {
-                        motionSet.Save( filePath, configuration?.BoneDatabase?.Skeletons?[ 0 ], configuration?.MotionDatabase );
+                        motionSet.Save( filePath,
+                            configuration?.BoneDatabase?.Skeletons?[ 0 ], configuration?.MotionDatabase );
                     }
                 }
             } );
-            AddCustomHandler( "Copy bone names to clipboard",
-                () => Clipboard.SetText( string.Join( "\n", Data.BoneInfos.Select( x => x.Name ) ) ) );
         }
 
-        protected override void Load( Motion data, Stream source )
-        {
+        protected override void Load( Motion data, Stream source ) =>
             data.Load( source, SourceConfiguration?.BoneDatabase?.Skeletons?[ 0 ] );
-        }
 
         protected override void PopulateCore()
         {
-            if ( !Data.HasBinding )
+            if ( !Data.HasController )
             {
-                var skeleton = SourceConfiguration?.BoneDatabase?.Skeletons?[ 0 ];
+                var skeletonEntry = SourceConfiguration?.BoneDatabase?.Skeletons?[ 0 ];
                 var motionDatabase = SourceConfiguration?.MotionDatabase;
 
                 try
                 {
-                    Data.Bind( skeleton, motionDatabase );
+                    Data.GetController( skeletonEntry, motionDatabase );
                 }
-
                 catch ( ArgumentNullException )
                 {
+
                 }
             }
 
-            if ( Data.HasBinding )
+            if ( Data.HasController )
             {
-                Nodes.Add( new MotionBindingNode( "Binding", Data.Bind() ) );
+                Nodes.Add( new MotionControllerNode( "Controller", Data.GetController() ) );
             }
-
             else
             {
                 Nodes.Add( new ListNode<KeySet>( "Key sets", Data.KeySets ) );
@@ -113,11 +97,9 @@ namespace MikuMikuModel.Nodes.Motions
     {
         public override NodeFlags Flags => NodeFlags.Rename;
 
-        [Category( "General" )]
-        [TypeConverter( typeof( IdTypeConverter ) )]
-        public uint Id
+        public int Id
         {
-            get => GetProperty<uint>();
+            get => GetProperty<int>();
             set => SetProperty( value );
         }
 

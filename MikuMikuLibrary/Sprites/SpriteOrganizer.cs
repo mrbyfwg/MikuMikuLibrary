@@ -24,55 +24,57 @@ namespace MikuMikuLibrary.Sprites
 
                 return Right.InsertSprite( sprite );
             }
-
-            int spriteWidth = ( int ) sprite.Width + 1;
-            int spriteHeight = ( int ) sprite.Height + 1;
-
-            if ( Sprite != null )
-                return null;
-
-            if ( spriteWidth > Width || spriteHeight > Height )
-                return null;
-
-            if ( spriteWidth == Width && spriteHeight == Height )
-            {
-                Sprite = sprite;
-                return this;
-            }
-
-            Left = new SpriteTree();
-            Right = new SpriteTree();
-
-            int w = Width - spriteWidth;
-            int h = Height - spriteHeight;
-
-            if ( w > h )
-            {
-                Left.X = X;
-                Left.Y = Y;
-                Left.Width = spriteWidth;
-                Left.Height = Height;
-
-                Right.X = X + spriteWidth;
-                Right.Y = Y;
-                Right.Width = Width - spriteWidth;
-                Right.Height = Height;
-            }
-
             else
             {
-                Left.X = X;
-                Left.Y = Y;
-                Left.Width = Width;
-                Left.Height = spriteHeight;
+                int spriteWidth = ( int )sprite.Width + 1;
+                int spriteHeight = ( int )sprite.Height + 1;
 
-                Right.X = X;
-                Right.Y = Y + spriteHeight;
-                Right.Width = Width;
-                Right.Height = Height - spriteHeight;
+                if ( Sprite != null )
+                    return null;
+
+                if ( spriteWidth > Width || spriteHeight > Height )
+                    return null;
+
+                if ( spriteWidth == Width && spriteHeight == Height )
+                {
+                    Sprite = sprite;
+                    return this;
+                }
+
+                Left = new SpriteTree();
+                Right = new SpriteTree();
+
+                int w = Width - spriteWidth;
+                int h = Height - spriteHeight;
+
+                if ( w > h )
+                {
+                    Left.X = X;
+                    Left.Y = Y;
+                    Left.Width = spriteWidth;
+                    Left.Height = Height;
+
+                    Right.X = X + spriteWidth;
+                    Right.Y = Y;
+                    Right.Width = Width - spriteWidth;
+                    Right.Height = Height;
+                }
+
+                else
+                {
+                    Left.X = X;
+                    Left.Y = Y;
+                    Left.Width = Width;
+                    Left.Height = spriteHeight;
+
+                    Right.X = X;
+                    Right.Y = Y + spriteHeight;
+                    Right.Width = Width;
+                    Right.Height = Height - spriteHeight;
+                }
+
+                return Left.InsertSprite( sprite );
             }
-
-            return Left.InsertSprite( sprite );
         }
 
         public void UpdateSprites()
@@ -90,6 +92,14 @@ namespace MikuMikuLibrary.Sprites
 
     public static class SpriteOrganizer
     {
+        private struct PackSpritesReturnData
+        {
+            public List<Sprite> OrganizedSprites;
+            public List<Sprite> UnorganizedSprites;
+            public int Width;
+            public int Height;
+        }
+
         private static PackSpritesReturnData OrganizeSprites( int width, int height, int maxSize, List<Sprite> sprites )
         {
             var perfectFit = sprites.FirstOrDefault(
@@ -105,10 +115,10 @@ namespace MikuMikuLibrary.Sprites
 
                 return new PackSpritesReturnData
                 {
-                    OrganizedSprites = new List<Sprite> { perfectFit },
+                    OrganizedSprites = new List<Sprite>() { perfectFit },
                     UnorganizedSprites = unFitSprites,
                     Width = maxSize,
-                    Height = maxSize
+                    Height = maxSize,
                 };
             }
 
@@ -125,11 +135,13 @@ namespace MikuMikuLibrary.Sprites
 
                 var unFitSprites = new List<Sprite>();
                 foreach ( var sprite in sprites )
+                {
                     if ( spriteTree.InsertSprite( sprite ) == null )
                     {
                         allOrganized = false;
                         unFitSprites.Add( sprite );
                     }
+                }
 
                 if ( allOrganized )
                 {
@@ -154,7 +166,7 @@ namespace MikuMikuLibrary.Sprites
                             OrganizedSprites = sprites.Except( unFitSprites ).ToList(),
                             UnorganizedSprites = unFitSprites,
                             Width = width,
-                            Height = height
+                            Height = height,
                         };
                     }
                 }
@@ -165,23 +177,22 @@ namespace MikuMikuLibrary.Sprites
                 OrganizedSprites = sprites,
                 UnorganizedSprites = new List<Sprite>(),
                 Width = width,
-                Height = height
+                Height = height,
             };
         }
 
         private static IEnumerable<PackSpritesReturnData> OrganizeSprites( List<Sprite> sprites, int maxSize )
         {
-            maxSize = Math.Max( maxSize,
-                ( int ) Math.Max( sprites.Max( x => x.Width ), sprites.Max( x => x.Height ) ) );
+            maxSize = Math.Max( maxSize, ( int )Math.Max( sprites.Max( x => x.Width ), sprites.Max( x => x.Height ) ) );
 
             var spritesToOrganize = new List<Sprite>( sprites );
             while ( spritesToOrganize.Count != 0 )
             {
-                var spritesToOrganizeForThisTurn = new List<Sprite>();
+                List<Sprite> spritesToOrganizeForThisTurn = new List<Sprite>();
                 int filledPixelCount = 0;
                 int evaluatedPixelCount = 0;
-                var evaluatedSprites = new List<Sprite>();
-                var failedSprites = new List<Sprite>();
+                List<Sprite> evaluatedSprites = new List<Sprite>();
+                List<Sprite> failedSprites = new List<Sprite>();
                 int textureWidth = 4;
                 int textureHeight = 4;
                 int texturePixelCount = textureWidth * textureHeight;
@@ -190,15 +201,16 @@ namespace MikuMikuLibrary.Sprites
                 int nextTexturePixelCount = nextTextureWidth * nextTextureHeight;
                 int nextExtraPixelCount = nextTexturePixelCount - texturePixelCount;
 
-                var sortedSprites = spritesToOrganize.OrderByDescending( x => x.Width * x.Height ).ToList();
+                List<Sprite> sortedSprites = spritesToOrganize.OrderByDescending( x => x.Width * x.Height ).ToList();
                 foreach ( var sprite in sortedSprites )
                 {
-                    int spriteWidth = ( int ) sprite.Width;
-                    int spriteHeight = ( int ) sprite.Height;
+                    int spriteWidth = ( int )sprite.Width;
+                    int spriteHeight = ( int )sprite.Height;
                     int spritePixelCount = spriteWidth * spriteHeight;
 
                     bool adding = true;
                     while ( adding )
+                    {
                         if ( filledPixelCount + evaluatedPixelCount + spritePixelCount <= nextTexturePixelCount )
                         {
                             evaluatedPixelCount += spritePixelCount;
@@ -233,8 +245,12 @@ namespace MikuMikuLibrary.Sprites
                                 break;
                             }
                         }
+                    }
 
-                    if ( adding ) failedSprites.Add( sprite );
+                    if ( adding )
+                    {
+                        failedSprites.Add( sprite );
+                    }
                 }
 
                 spritesToOrganize.Clear();
@@ -244,10 +260,12 @@ namespace MikuMikuLibrary.Sprites
                 {
                     bool successCondition = evaluatedPixelCount > nextExtraPixelCount / 2;
                     foreach ( var sprite in evaluatedSprites )
+                    {
                         if ( successCondition )
                             spritesToOrganizeForThisTurn.Add( sprite );
                         else
                             spritesToOrganize.Add( sprite );
+                    }
 
                     if ( successCondition )
                     {
@@ -256,20 +274,11 @@ namespace MikuMikuLibrary.Sprites
                     }
                 }
 
-                var organizedSpriteData =
-                    OrganizeSprites( textureWidth, textureHeight, maxSize, spritesToOrganizeForThisTurn );
+                var organizedSpriteData = OrganizeSprites( textureWidth, textureHeight, maxSize, spritesToOrganizeForThisTurn );
                 spritesToOrganize.AddRange( organizedSpriteData.UnorganizedSprites );
 
                 yield return organizedSpriteData;
             }
-        }
-
-        private struct PackSpritesReturnData
-        {
-            public List<Sprite> OrganizedSprites;
-            public List<Sprite> UnorganizedSprites;
-            public int Width;
-            public int Height;
         }
 
         //public static TextureSet Organize( Dictionary<Sprite, Bitmap> sprites )
