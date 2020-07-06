@@ -22,6 +22,26 @@ namespace Test.Pojo
         public int shop_st_month;
         public int shop_st_year;
         public int sort_index;
+        public CustomizeItemBean() { }
+        public CustomizeItemBean(CustomizeItemBean old)
+        {
+            index = old.index;
+            chara = old.chara;
+            id = old.id;
+            name = old.name;
+            ng = old.ng;
+            obj_id = old.obj_id;
+            parts = old.parts;
+            sell_type = old.sell_type;
+            shop_ed_day = old.shop_ed_day;
+            shop_ed_month = old.shop_ed_month;
+            shop_ed_year = old.shop_ed_year;
+            shop_price = old.shop_price;
+            shop_st_day = old.shop_st_day;
+            shop_st_month = old.shop_st_month;
+            shop_st_year = old.shop_st_year;
+            sort_index = old.sort_index;
+        }
         public List<String> toString()
         {
             List<String> result = new List<string>();

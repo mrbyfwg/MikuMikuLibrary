@@ -431,5 +431,13 @@ namespace Test
             if (newItem.index > lastItemIndex) lastItemIndex = newItem.index;
             if (newItem.no > lastItemNo) lastItemNo = newItem.no;
         }
+        public String getMeshName(String objsetName)
+        {
+            foreach (CharacterItemBean cib in itemList)
+                if (!cib.haveTexChg)
+                    if (cib.objset[0].objset.Equals(objsetName))
+                        return cib.dataObjUid[0].uid;
+            throw new Exception("ObjsetNameNotFound");
+        }
     }
 }
