@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -27,7 +28,7 @@ namespace Test
         CharacterTbl tetTbl;
         ObjDb objdb;
         SprDb sprdb;
-        List<LogBean> addLogs = new List<LogBean>();
+        Logs logs;
         public SlotEditor(String moduleIdPath,String cstmItemIdPath,String chritmPropPath,String objDbPath,String sprDbPath)
         {
             FarcPack.Program.Main1(new string[] {@moduleIdPath});
@@ -75,33 +76,83 @@ namespace Test
 
         }
 
+        public void loopObjsetFolder(string objsetpath)
+        {
+            var files = Directory.GetFiles(objsetpath, "*.farc");
+            List<String> items = new List<string>();
+            foreach (var file in files)
+            {
+                String farcName = file.ToString().Replace(objsetpath+"\\", "", StringComparison.InvariantCultureIgnoreCase);
+                string cha = farcName.Substring(0, 3);
+                string farcName1 = farcName.Replace(".farc", "");
+                switch (farcType(farcName))
+                {
+                    case 0:
+                        int no = mikTbl.findItemByNo(Int32.Parse(farcName1.Replace("cmnitm", ""))).no;
+                        copyCustomizeItemByObjId(no, "");
+                        break;
+                    case 1:
+                        copyModuleWithNewBody(farcName1, "");
+                        break;
+                    case 2:
+                        items.Add(farcName1);
+                        break;
+                }
+            }
+            foreach (String s in items)
+            {
+                String cha = s.Substring(0, 3);
+                int chano =Int32.Parse( s.Replace(cha + "itm", ""));
+                CharacterItemBean cib = copyItemByNo(getStandardName(cha), chano);
+                foreach (ModuleLogBean mlb in logs.modules)
+                    foreach (ItemBean ib in findCharactor(mlb.newModule.chara).findCosById(mlb.newCos.id).item)
+                        if (ib.item.Equals(chano.ToString()))
+                            ib.item = cib.no.ToString();
+
+
+            }
+        }
+        private int farcType(string farcName)
+        {
+            string chaname = farcName.Substring(0, 3);
+            if (chaname.Equals("cmn")) return 0;
+            CharacterTbl chaTbl = findCharactor(getStandardName(chaname));
+            CharacterItemBean cib = chaTbl.findItemByNo(Int32.Parse(farcName.Replace(chaname+"itm","").Replace(".farc","")));
+            if (cib.sub_id == 10) return 1;
+            else return 2;
+        }
+        public void createNewLogs(string newFarcRomPath)
+        {
+            logs = new Logs();
+            logs.farcPath = newFarcRomPath;
+        }
+
         public void copySkinParam(string newFarcRomPath, string[] officialMdataPath, string outputPath)
         {
-            foreach(LogBean lb in addLogs)
+            foreach(ItemLogBean ilb in logs.items)
             {
-                String oldSP = "ext_skp_" + lb.oldMeshName + ".txt";
-                String newSP = "ext_skp_" + lb.meshName + ".txt";
-                int f = 1;
-                for (int i = 0; i <= officialMdataPath.Length - 1; i++)
+                String oldSP = "ext_skp_" + ilb.oldItem.dataObjUid[0].uid.ToLower() + ".txt";
+                String newSP = "ext_skp_" + ilb.newItem.dataObjUid[0].uid.ToLower() + ".txt";
+                int f = 0;
+                for (int i = officialMdataPath.Length - 1; i >= 0; i--)
                 {
-                    try
-                    {
-                        f = f * copy(oldSP, newSP, newFarcRomPath + @"\skin_param", officialMdataPath[i] + @"\rom\skin_param", outputPath + @"\MZZZ\rom\skin_param");
-                    }catch(IOException e) { }
+
+                    f = copy(oldSP, newSP, newFarcRomPath + @"\rom\skin_param", officialMdataPath[i] + @"\rom\skin_param", outputPath + @"\MZZZ\rom\skin_param");
+                    if (f == 0) break;
                 }
-                if (f != 0) Console.WriteLine(oldSP+"-->"+newSP);
+                if (f == -1) Console.WriteLine(oldSP+"-->"+newSP);
             }
         }
 
         public void copyFarc(string newFarcRomPath,string outputPath)
         {
-            foreach(LogBean lb in addLogs)
+            foreach(ItemLogBean ilb in logs.items)
             {
-                String oldfarc = lb.oldObjsetName;
-                String newfarc = lb.objsetName.ToLower();
-                int f = copy(oldfarc, newfarc, newFarcRomPath + @"\objset", newFarcRomPath + @"\objset", outputPath + @"\MZZZ\rom\objset");
+                String oldfarc = ilb.oldItem.objset[0].objset.ToLower() + ".farc";
+                String newfarc = ilb.newItem.objset[0].objset.ToLower() + ".farc";
+                int f = copy(oldfarc, newfarc, newFarcRomPath + @"\rom\objset", newFarcRomPath + @"\rom\objset", outputPath + @"\MZZZ\rom\objset");
                 if (f == -1) Console.WriteLine(oldfarc + "-->" + newfarc);
-                else
+                else if(f == 0)
                 {
                     String file = outputPath + @"\MZZZ\rom\objset\" + newfarc;
                     String folder = file.Substring(0, file.Length - 5);
@@ -109,8 +160,10 @@ namespace Test
                     FileInfo fi = new FileInfo(folder + @"\" + oldfarc.Substring(0, oldfarc.Length - 5) + "_obj.bin"); //旧名
                     fi.MoveTo(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin");//新名
 
-                    int i = setMeshNameAndId(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin", lb.oldMeshName, lb.meshName);
-                    if (i == -1) Console.WriteLine(lb.oldMeshName + "->" + lb.meshName);
+                    String oldMeshName = ilb.oldItem.dataObjUid[0].uid.ToLower();
+                    String newMeshName = ilb.newItem.dataObjUid[0].uid.ToLower();
+                    int i = setMeshNameAndId(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin", oldMeshName, newMeshName);
+                    if (i == -1) Console.WriteLine(oldMeshName + "->" + newMeshName);
 
                     fi = new FileInfo(folder + @"\" + oldfarc.Substring(0, oldfarc.Length - 5) + "_tex.bin"); //旧名
                     fi.MoveTo(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_tex.bin");//新名
@@ -122,34 +175,73 @@ namespace Test
 
         public void copy2d(string newFarcRomPath,string[] officialMdataPath, string outputPath)
         {
-            foreach (LogBean lb in addLogs) 
+            foreach (ModuleLogBean mlb in logs.modules) 
             {
                 String str = "";
-                if (lb.oldModuleId <= 99)
+                if (mlb.oldModule.id <= 99)
                 {
                     str = str + "0";
-                    if (lb.oldModuleId <= 9) str = str + "0";
+                    if (mlb.oldModule.id <= 9) str = str + "0";
+                }
+                String str1 = "";
+                if (mlb.newModule.id <= 99)
+                {
+                    str = str1 + "0";
+                    if (mlb.newModule.id <= 9) str = str + "0";
                 }
 
-                String oldspr = "spr_sel_md" + str + lb.oldModuleId+"cmn.farc";
-                String newspr = lb.sprName;
+                String oldspr = "spr_sel_md" + str  + mlb.oldModule.id+"cmn.farc";
+                String newspr = "spr_sel_md" + str1 + mlb.newModule.id + "cmn.farc";
                 String outputPath1 = outputPath + @"\MZZZ\rom\2d";
-                int f = 1;
-                for (int i = 0; i <= officialMdataPath.Length - 1; i++)
+                int f = 0;
+                for (int i = officialMdataPath.Length-1; i >= 0; i--)
                 {
-                    try
-                    {
-                        f = f * copy(oldspr, newspr, newFarcRomPath + @"\2d", officialMdataPath[i] + @"\rom\2d", outputPath1);
-                    }
-                    catch (IOException e) { }
+                    f = copy(oldspr, newspr, newFarcRomPath + @"\rom\2d", officialMdataPath[i] + @"\rom\2d", outputPath1);
+                    if (f == 0) break;
                 }
-                if (f != 0) Console.WriteLine(oldspr + "-->" + newspr);
-                else
+                if (f == -1) Console.WriteLine(oldspr + "-->" + newspr);
+                else if(f == 0)
                 {
                     String file = outputPath1 + @"\" + newspr;
                     String folder = file.Substring(0, file.Length - 5);
                     FarcPack.Program.Main1(new string[] { file });
                     FileInfo fi = new FileInfo(folder+@"\"+oldspr.Substring(0,oldspr.Length-5)+".bin"); //旧名
+                    fi.MoveTo(folder + @"\" + newspr.Substring(0, newspr.Length - 5) + ".bin");//新名
+                    FarcPack.Program.Main1(new string[] { folder });
+                    Directory.Delete(folder, true);
+                }
+            }
+            foreach (CSTMItemLogBean clb in logs.cstmItems)
+            {
+                String str = "";
+                if (clb.oldCSTMItem.id <= 99)
+                {
+                    str = str + "0";
+                    if (clb.oldCSTMItem.id <= 9) str = str + "0";
+                }
+                String str1 = "";
+                if (clb.newCSTMItem.id <= 99)
+                {
+                    str = str1 + "0";
+                    if (clb.newCSTMItem.id <= 9) str = str + "0";
+                }
+
+                String oldspr = "spr_cmnitm_thmb" + str + clb.oldCSTMItem.id + ".farc";
+                String newspr = "spr_cmnitm_thmb" + str1 + clb.newCSTMItem.id + ".farc";
+                String outputPath1 = outputPath + @"\MZZZ\rom\2d";
+                int f = 0;
+                for (int i = officialMdataPath.Length - 1; i >= 0; i--)
+                {
+                    f = copy(oldspr, newspr, newFarcRomPath + @"\rom\2d", officialMdataPath[i] + @"\rom\2d", outputPath1);
+                    if (f == 0) break;
+                }
+                if (f == -1) Console.WriteLine(oldspr + "-->" + newspr);
+                else if (f == 0)
+                {
+                    String file = outputPath1 + @"\" + newspr;
+                    String folder = file.Substring(0, file.Length - 5);
+                    FarcPack.Program.Main1(new string[] { file });
+                    FileInfo fi = new FileInfo(folder + @"\" + oldspr.Substring(0, oldspr.Length - 5) + ".bin"); //旧名
                     fi.MoveTo(folder + @"\" + newspr.Substring(0, newspr.Length - 5) + ".bin");//新名
                     FarcPack.Program.Main1(new string[] { folder });
                     Directory.Delete(folder, true);
@@ -161,26 +253,33 @@ namespace Test
             String path1 = localFilePath +@"\"+ fileName;
             String path2 = localFilePath1 +@"\"+ fileName;
             String savePath = saveFilePath + @"\" + newFileName;
-            if (File.Exists(path1))
+            Exception e1 = new Exception();
+            try
             {
-                FileInfo file1 = new FileInfo(path1);
-                file1.CopyTo(savePath);
-                return 0;
+                if (File.Exists(path1))
+                {
+                    FileInfo file1 = new FileInfo(path1);
+                    file1.CopyTo(savePath);
+                    return 0;
+                }
+                if (File.Exists(path2))
+                {
+                    FileInfo file1 = new FileInfo(path2);
+                    file1.CopyTo(savePath);
+                    return 0;
+                }
+            }catch(IOException e){
+                e1 = e; 
             }
-            if (File.Exists(path2))
-            {
-                FileInfo file1 = new FileInfo(path2);
-                file1.CopyTo(savePath);
-                return 0;
-            }
+            if (e1.Message.Contains("already exists")) return 1;
             return -1;
         }
-        public void output(String str)
+        public void createPath(String str)
         {
-            var utf8NoBom = new UTF8Encoding(false);
-            DirectoryInfo di = new DirectoryInfo(@str+@"\MZZZ\rom\objset");
+            if (Directory.Exists(str + @"\MZZZ")) throw new Exception("DirectoryExists");
+            DirectoryInfo di = new DirectoryInfo(@str + @"\MZZZ\rom\objset");
             di.Create();
-            di = new DirectoryInfo(@str + @"\MZZZ\rom\mdata_gm_customize_item_id");
+            di = new DirectoryInfo(@str + @"\MZZZ\rom\gm_customize_item_tbl");
             di.Create();
             di = new DirectoryInfo(@str + @"\MZZZ\rom\mdata_chritm_prop");
             di.Create();
@@ -190,12 +289,19 @@ namespace Test
             di.Create();
             di = new DirectoryInfo(@str + @"\MZZZ\rom\skin_param");
             di.Create();
+        }
+        public void output(String str)
+        {
+            var utf8NoBom = new UTF8Encoding(false);
+
             File.WriteAllLines(@str + @"\MZZZ\rom\mdata_gm_module_tbl\gm_module_id.bin", modules.toString(), utf8NoBom);
             FarcPack.Program.Main1(new string[] { @str + @"\MZZZ\rom\mdata_gm_module_tbl" });
             Directory.Delete(@str + @"\MZZZ\rom\mdata_gm_module_tbl", true);
-            File.WriteAllLines(@str + @"\MZZZ\rom\mdata_gm_customize_item_id\gm_customize_item_id.bin", cstmItems.toString(), utf8NoBom);
-            FarcPack.Program.Main1(new string[] { @str + @"\MZZZ\rom\mdata_gm_customize_item_id" });
-            Directory.Delete(@str + @"\MZZZ\rom\mdata_gm_customize_item_id", true);
+
+            File.WriteAllLines(@str + @"\MZZZ\rom\gm_customize_item_tbl\gm_customize_item_id.bin", cstmItems.toString(), utf8NoBom);
+            FarcPack.Program.Main1(new string[] { @str + @"\MZZZ\rom\gm_customize_item_tbl" });
+            Directory.Delete(@str + @"\MZZZ\rom\gm_customize_item_tbl", true);
+
             File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\mikitm_tbl.txt", mikTbl.toString(), utf8NoBom);
             File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\hakitm_tbl.txt", hakTbl.toString(), utf8NoBom);
             File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\kaiitm_tbl.txt", kaiTbl.toString(), utf8NoBom);
@@ -209,6 +315,7 @@ namespace Test
             File.WriteAllLines(@str + @"\MZZZ\rom\mdata_chritm_prop\tetitm_tbl.txt", tetTbl.toString(), utf8NoBom);
             FarcPack.Program.Main1(new string[] { @str + @"\MZZZ\rom\mdata_chritm_prop"});
             Directory.Delete(@str + @"\MZZZ\rom\mdata_chritm_prop", true);
+
             File.WriteAllLines(@str + @"\MZZZ\rom\objset\mdata_obj_db.xml", objdb.toString(), utf8NoBom);
             DatabaseConverter.Program.Main1(new string[] { @str + @"\MZZZ\rom\objset\mdata_obj_db.xml" });
             File.WriteAllLines(@str + @"\MZZZ\rom\2d\mdata_spr_db.xml", sprdb.toString(), utf8NoBom);
@@ -217,10 +324,10 @@ namespace Test
             File.Delete(@str + @"\MZZZ\rom\objset\mdata_obj_db.xml");
 
             File.WriteAllLines(@str + @"\MZZZ\info.txt", info, utf8NoBom);
-
-            var loglist = new List<String>();
-            foreach (LogBean lb in addLogs) loglist.AddRange(lb.toString());
-            File.WriteAllLines(@str + @"\MZZZ\AddLog.txt", loglist, utf8NoBom);
+        }
+        public void getLogs(String str)
+        {
+            File.WriteAllLines(@str + @"\MZZZ\" + logs.farcPath.Substring(logs.farcPath.Length - 4) + "Logs.txt", logs.toString(),Encoding.UTF8);
         }
         public void addBaseModuleWithNewBody(String charactor,String name)
         {
@@ -246,58 +353,66 @@ namespace Test
             foreach (ItemBean i in newCos.item)
                 if (Int32.Parse(i.item) == OldBodyno) i.item = (chaTbl.lastItemNo + 1).ToString();
             chaTbl.addCos(newCos);
-            
+            logs.modules.Add(new ModuleLogBean(modules.findModuleById(moduleId), mb, chaTbl.findCosById(oriCosId), newCos));
+
             //新增身体
             CharacterItemBean newItem = copyItemByNo(mb.chara,OldBodyno);
+
             //更新缩略图
             String spiritName = sprdb.addMD(mb.id);
 
             //更新日志
-            String oldObjName = chaTbl.findItemByNo(OldBodyno).objset[0].objset;
-            addLogs.Add(new LogBean(mb.name,
-                moduleId,
-                spiritName+".farc",
-                oldObjName.ToLower()+".farc", 
-                newItem.objset[0].objset+".farc", 
-                chaTbl.getMeshName(oldObjName).ToLower(),
-                newItem.dataObjUid[0].uid.ToLower()));
+
         }
         public void copyModuleWithNewBody(String charactor,int bodyId,String name)
         {
             CharacterTbl chaTbl = findCharactor(charactor);
             List<CosBean> coslist = chaTbl.findCosByItemId(bodyId);
             if (coslist.Count == 0) throw new Exception("BodyNotFound");
-            ModuleBean mb = modules.findModuleByCosId(charactor,coslist[0].id + 1);
+            ModuleBean mb = modules.findModuleByCos(charactor,StringCut.cosId2String(coslist[0].id));
             copyModuleWithNewBody(mb.id,name);
         }
         public void copyModuleWithNewBody(String farcName,String name)
         {
-            copyModuleWithNewBody(getStandardName(farcName.Substring(0, 3)), Int32.Parse(farcName.Substring(6))-1, name);
+
+            copyModuleWithNewBody(getStandardName(farcName.Substring(0, 3)), Int32.Parse(farcName.Substring(6)), name);
         }
-        public CharacterItemBean copyItemByNo(String charactor,int no)
+        public CharacterItemBean copyItemByNo(String charactor,int no,int itemid = -1)
             //复制角色零件
         {
             //复制item
             CharacterTbl chaTbl = findCharactor(charactor);
             CharacterItemBean newitem = new CharacterItemBean(chaTbl.findItemByNo(no));
-            if (newitem.attr != 1) 
-                if(newitem.type == 1) 
-                {
-                    //泳装/ST
-                    newitem.attr = 1;
-                    newitem.haveTexChg = false;
-                    newitem.haveTexOrg = false;
-                    newitem.haveTexLength = false;
-                    newitem.objsetLength = 1;
-                }else throw new Exception("CanNotCopyTextureReplacedItem");
+            String oriUid = newitem.dataObjUid[0].uid;
+            if (newitem.attr != 1)
+                //换色的添加原始模组
+                return copyItemByNo(charactor, newitem.org_itm, itemid);
             newitem.name = newitem.name + " NEW";
-            newitem.objset[0].objset = objdb.getCharacterNameUpper(charactor, 1);
-            newitem.dataObjUid[0].uid = objdb.getCharacterNameUpper(charactor, 1) 
+            String objsetName = "";
+            if (itemid == -1)
+            { 
+                //添加普通角色配件
+                newitem.no = chaTbl.lastItemNo + 1;
+                objsetName = objdb.getCharacterNameUpper(charactor, 1);
+            }
+            else
+            {
+                //添加通用配件，因为要指定编号
+                newitem.no = itemid;
+                objsetName = "cmnitm"+itemid.ToString();
+            }
+
+            newitem.objset[0].objset = objsetName;
+            newitem.dataObjUid[0].uid = objsetName
                 + newitem.dataObjUid[0].uid.Substring(newitem.dataObjUid[0].uid.IndexOf('_'));
-            newitem.no = chaTbl.lastItemNo + 1;
+            //避免meshname过长
+            if ((newitem.dataObjUid[0].uid.Length == 32)&&(oriUid.Length < 32)) 
+                newitem.dataObjUid[0].uid = newitem.dataObjUid[0].uid.Substring(0, newitem.dataObjUid[0].uid.Length - 1);
+
             chaTbl.addItem(newitem);
             //复制objdb
             objdb.add(newitem);
+            logs.items.Add(new ItemLogBean(chaTbl.findItemByNo(no), newitem));
             return newitem;
         }
         public void copyCustomizeItemInAllParts(int cstmItemNo,String name)
@@ -308,9 +423,17 @@ namespace Test
             //添加sprdb
             //循环添加chatbl
         }
-        public void copyCustomizeItemById(int cstmItemNo,String name,int type)
+        public void copyCustomizeItemByObjId(int cstmItemNo,String name)
         {
-            
+            CustomizeItemBean cib = new CustomizeItemBean(cstmItems.findCstmItemByObjId(cstmItemNo));
+            cib.id = cstmItems.lastId + 1;
+            cib.sort_index = cstmItems.lastSort_index + 1;
+            cib.obj_id = findLastItemId()+1;
+            cstmItems.add(cib);
+            logs.cstmItems.Add(new CSTMItemLogBean(cstmItems.findCstmItemByObjId(cstmItemNo), cib));
+            for(int i = 0; i <= 9; i++)
+                copyItemByNo(characterList[i], cstmItemNo, cib.obj_id);
+            sprdb.addCST(cib.id);
         }
         private CharacterTbl findCharactor(String charactor)
         {
@@ -416,7 +539,7 @@ namespace Test
             if (idOffset != newIdOffset)
             {
                 bin[index + idOffset] = 0;
-                bin[index + idOffset] = 0;
+                bin[index + idOffset+1] = 0;
                 File.Delete(path);
                 File.WriteAllBytes(path, bin);
                 return -1;

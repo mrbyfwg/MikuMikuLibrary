@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using Test.Pojo;
 
 namespace Test
 {
@@ -68,6 +69,19 @@ namespace Test
             String STEName = "SPRTEX_SEL_MD" + str + mdId.ToString() + "CMN_MERGE_BC5COMP_0";
             add(lastId + 1, header, header.ToLower() + ".bin", lastId1 + 2, header + "_MD_IMG", lastId1 + 1, STEName);
             return header.ToLower();
+        }
+
+        public void addCST(int cstId)
+        {
+            String str = "";
+            if (cstId <= 99)
+            {
+                str = str + "0";
+                if (cstId <= 9) str = str + "0";
+            }
+            String header = "SPR_CMNITM_THMB" + str+cstId.ToString();
+            String STEName = "SPRTEX_CMNITM_THMB" + str + cstId.ToString() + "_MERGE_BC5COMP_0";
+            add(lastId + 1, header, header.ToLower() + ".bin", lastId1 + 2, header + "_ITM_IMG", lastId1 + 1, STEName);
         }
     }
 }
