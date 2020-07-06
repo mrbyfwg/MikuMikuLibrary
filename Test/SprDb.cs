@@ -56,11 +56,18 @@ namespace Test
         {
             return new List<string>() { "<?xml version=\"1.0\" encoding=\"utf-8\"?>", spr.ToString() };
         }
-        public void addMD(int mdId)
+        public String addMD(int mdId)
         {
-            String header = "SPR_SEL_MD" + mdId.ToString() + "CMN";
-            String STEName = "SPRTEX_SEL_MD" + mdId.ToString() + "CMN_MERGE_BC5COMP_0";
+            String str = "";
+            if (mdId <= 99)
+            {
+                str = str + "0";
+                if (mdId <= 9) str = str + "0";
+            }
+            String header = "SPR_SEL_MD"+ str + mdId.ToString() + "CMN";
+            String STEName = "SPRTEX_SEL_MD" + str + mdId.ToString() + "CMN_MERGE_BC5COMP_0";
             add(lastId + 1, header, header.ToLower() + ".bin", lastId1 + 2, header + "_MD_IMG", lastId1 + 1, STEName);
+            return header.ToLower();
         }
     }
 }

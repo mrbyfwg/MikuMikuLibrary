@@ -27,9 +27,9 @@ namespace MikuMikuModel
 
             using ( var form = new MainForm() )
             {
+                form.OpenFile(@"C:\PDAFT\MDATA\MZZZ\rom\objset\rinitm1002.farc");
                 if ( args.Length > 0 && File.Exists( args[ 0 ] ) )
                     form.OpenFile( args[ 0 ] );
-
                 Application.Run( form );
             }
         }

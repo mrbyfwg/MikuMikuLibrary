@@ -394,5 +394,10 @@ namespace MikuMikuModel.GUI.Forms
             mPropertyGrid.BrowsableAttributes = new AttributeCollection();
 #endif
         }
+
+        private void mPropertyGrid_Click(object sender, EventArgs e)
+        {
+
+        }
     }
 }

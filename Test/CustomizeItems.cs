@@ -13,6 +13,8 @@ namespace Test
         public int length;
         public int patch;
         public int version;
+        public int lastId;
+        public int lastSort_index;
         public CustomizeItems(String[] ori)
         {
             //寻找长度行
@@ -56,6 +58,7 @@ namespace Test
                         itemList[index].chara = value;
                         break;
                     case "id":
+                        if (Int32.Parse(value) > lastId) lastId = Int32.Parse(value);
                         itemList[index].id = Int32.Parse(value);
                         break;
                     case "name":
@@ -95,6 +98,7 @@ namespace Test
                         itemList[index].shop_st_year = Int32.Parse(value);
                         break;
                     case "sort_index":
+                        if (Int32.Parse(value) > lastSort_index) lastSort_index = Int32.Parse(value);
                         itemList[index].sort_index = Int32.Parse(value);
                         break;
                     default:
@@ -120,6 +124,14 @@ namespace Test
             result.Add("patch=" + patch.ToString());
             result.Add("version=" + version.ToString());
             return result;
+        }
+        public CustomizeItemBean findCstmItemById(int id)
+        {
+            foreach(CustomizeItemBean cib in itemList)
+            {
+                if (cib.id == id) return cib;
+            }
+            throw new Exception("CSTMItemNotFound");
         }
     }
 }

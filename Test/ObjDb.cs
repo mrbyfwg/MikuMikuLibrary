@@ -1,9 +1,11 @@
-﻿using System;
+﻿using MikuMikuLibrary.Databases;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+using System.Xml.XPath;
 
 namespace Test
 {
@@ -100,12 +102,21 @@ namespace Test
             if (id > lastId) lastId = id;
             updateLastChaNo(name);
         }
-        public void add(CharacterItemBean newItem)
+        public String add(CharacterItemBean newItem)
         {
             String nameUP = newItem.objset[0].objset;
             String name = nameUP.ToLower();
             String meshName = newItem.dataObjUid[0].uid;
             add(nameUP, lastId + 1, name + "_obj.bin", name + "_tex.bin", name + ".farc", meshName, 0);
+            return name;
+        }
+        public String getMeshName(String name)
+        {
+
+            foreach (XElement x in objList)
+                if (x.Element("Name").Value.Equals(name,StringComparison.InvariantCultureIgnoreCase))
+                    return x.Element("Meshes").Element("MeshEntry").Element("Name").Value;
+            throw new Exception("ObjsetNameNotFound");
         }
         public List<String> toString()
         {
