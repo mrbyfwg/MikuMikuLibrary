@@ -36,4 +36,38 @@ namespace Test.Pojo
             this.meshName = meshName;
         }
     }
+    class ModuleLogBean 
+    {
+        public ModuleBean oldModule;
+        public ModuleBean newModule;
+        public CosBean oldCos;
+        public CosBean newCos;
+        public ModuleLogBean(ModuleBean oldModule,ModuleBean newModule,CosBean oldCos,CosBean newCos)
+        {
+            this.oldModule = oldModule;
+            this.newModule = newModule;
+            this.oldCos = oldCos;
+            this.newCos = newCos;
+        }
+    }
+    class ItemLogBean 
+    {
+        public CharacterItemBean oldItem;
+        public CharacterItemBean newItem;
+        public ItemLogBean(CharacterItemBean oldItem,CharacterItemBean newItem)
+        {
+            this.oldItem = oldItem;
+            this.newItem = newItem;
+        }
+    }
+    class CSTMItemLogBean 
+    {
+        public CustomizeItemBean oldCSTMItem;
+        public CustomizeItemBean newCSTMItem;
+        public CSTMItemLogBean(CustomizeItemBean oldCSTMItem,CustomizeItemBean newCSTMItem)
+        {
+            this.oldCSTMItem = oldCSTMItem;
+            this.newCSTMItem = newCSTMItem;
+        }
+    }
 }

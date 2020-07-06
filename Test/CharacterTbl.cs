@@ -410,7 +410,7 @@ namespace Test
                 foreach(CharacterItemBean c in itemList)
                     if(c.no == Int32.Parse(i.item))
                     {
-                        if (c.type == 1) return c.no;
+                        if (c.sub_id == 10) return c.no;
                         break;
                     }
             throw new Exception("BodyNotFound");

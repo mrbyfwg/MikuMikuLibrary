@@ -130,11 +130,11 @@ namespace Test
             if (mb.sort_index > lastSortIndex) lastSortIndex = mb.sort_index;
         }
 
-        public ModuleBean findModuleByCosId(String charactor,int id)
+        public ModuleBean findModuleByCos(String charactor,String Cos)
         {
             foreach (ModuleBean m in moduleList)
                 if(m.chara.Equals(charactor.ToUpper()))
-                    if (StringCut.cosString2Id(m.cos) == id) return m;
+                    if (m.cos == Cos) return m;
             throw new Exception("FindNoModuleWithCosId");
         }
 

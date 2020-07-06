@@ -60,7 +60,10 @@ namespace Test
         }
         public static String cosId2String(int cosId)
         {
-            return "COS_" + (cosId+1).ToString();
+            String str = "";
+            if (cosId+1 <= 99) str += "0";
+            if (cosId+1 <= 9) str += "0";
+            return "COS_" +str+ (cosId+1).ToString();
         }
     }
 }

@@ -13,8 +13,9 @@ namespace Test
         public int length;
         public int patch;
         public int version;
-        public int lastId;
-        public int lastSort_index;
+        public int lastId = -1;
+        public int lastSort_index = -1;
+        public int lastIndex = -1;
         public CustomizeItems(String[] ori)
         {
             //寻找长度行
@@ -52,6 +53,7 @@ namespace Test
                 String value = StringCut.splitAfterEqual(line);
                 if (itemList[index] == null) {itemList[index] = new CustomizeItemBean(); }
                 itemList[index].index = index;
+                if (lastIndex < index) lastIndex = index;
                 switch (key)
                 {
                     case "chara":
@@ -132,6 +134,25 @@ namespace Test
                 if (cib.id == id) return cib;
             }
             throw new Exception("CSTMItemNotFound");
+        }
+        public CustomizeItemBean findCstmItemByObjId(int obj_Id)
+        {
+            foreach (CustomizeItemBean cib in itemList)
+            {
+                if (cib.obj_id == obj_Id) return cib;
+            }
+            throw new Exception("CSTMItemNotFound");
+        }
+        public void add(CustomizeItemBean cib)
+        {
+            cib.index = lastIndex + 1;
+            if (itemList[cib.index] == null) itemList[cib.index] = new CustomizeItemBean();
+            else throw new Exception("UsedCustomizeItemIndex");
+            itemList[cib.index] = cib;
+            if (cib.index > lastIndex) lastIndex = cib.index;
+            if (cib.sort_index > lastSort_index) lastSort_index = cib.sort_index;
+            if (cib.id > lastId) lastId = cib.id;
+            length++;
         }
     }
 }
