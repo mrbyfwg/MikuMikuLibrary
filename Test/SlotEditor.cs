@@ -78,6 +78,7 @@ namespace Test
 
         public void loopObjsetFolder(string objsetpath)
         {
+            createNewLogs(objsetpath);
             var files = Directory.GetFiles(objsetpath, "*.farc");
             List<String> items = new List<string>();
             foreach (var file in files)
@@ -105,6 +106,7 @@ namespace Test
                 int chano =Int32.Parse( s.Replace(cha + "itm", ""));
                 CharacterItemBean cib = copyItemByNo(getStandardName(cha), chano);
                 foreach (ModuleLogBean mlb in logs.modules)
+                    if(mlb.newModule.chara.Equals(getStandardName(cha),StringComparison.InvariantCultureIgnoreCase))
                     foreach (ItemBean ib in findCharactor(mlb.newModule.chara).findCosById(mlb.newCos.id).item)
                         if (ib.item.Equals(chano.ToString()))
                             ib.item = cib.no.ToString();
