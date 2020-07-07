@@ -23,7 +23,6 @@ namespace Test
         public int lastNerNo = 1000;
         public int lastKaiNo = 1000;
         public int lastLenNo = 1000;
-        public XElement obj_dbHeader;
         public int lastId = -1;
         public ObjDb(String str)
         {
@@ -46,7 +45,7 @@ namespace Test
                 try
                 {
                     value = Int32.Parse(name.Substring(6));
-                }catch(Exception e) { }
+                }catch(Exception) { }
                     String key = name.Substring(0, 6);
                 switch (key)
                 {
