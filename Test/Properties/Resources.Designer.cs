@@ -59,5 +59,27 @@ namespace Test.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   查找类似 #将数个模组替换mod合并为一个mod, 并添加模型槽位
+        ///#Merge several module replacement mods into one mod and add model slots
+        ///#目前无法自动添加材质替换类零件，需要手动替换材质
+        ///#Currently it is not possible to automatically add texture replacement items, you need to manually replace the texture
+        ///
+        ///#!!!!!所有路径大小写敏感!!!!!
+        ///#!!!!!All paths are case sensitive!!!!!
+        ///               
+        ///#以下五个文件的选择优先级
+        ///#1,有带mdata_*前缀的优先选择, 选择靠后的M***\rom文件夹中的mdata_*
+        ///#2,没有带mdata_*前缀的, 选择靠后M***\rom文件夹中不带前缀的
+        ///#3,都没有, 选择游戏基础rom文件夹中的
+        ///#Selection priority of the following five files
+        ///#1, [字符串的其余部分被截断]&quot;; 的本地化字符串。
+        /// </summary>
+        internal static string configText {
+            get {
+                return ResourceManager.GetString("configText", resourceCulture);
+            }
+        }
     }
 }

@@ -39,14 +39,10 @@ namespace Test
         }
         private void updateLastChaNo(String name)
         {
-            if (name.Length >= 7)
+            if ((name.Length >= 7)&&(name.Substring(3,3).Equals("itm",StringComparison.InvariantCultureIgnoreCase)))
             {
-                int value = 0;
-                try
-                {
-                    value = Int32.Parse(name.Substring(6));
-                }catch(Exception) { }
-                    String key = name.Substring(0, 6);
+                int value = Int32.Parse(name.Substring(6));
+                String key = name.Substring(0, 6);
                 switch (key)
                 {
                     case "MIKITM":

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text;
 using Test.Pojo;
@@ -29,8 +30,10 @@ namespace Test
         ObjDb objdb;
         SprDb sprdb;
         Logs logs;
+        Boolean allowTextureReplace = false;//暂时无法实现
         public SlotEditor(String moduleIdPath,String cstmItemIdPath,String chritmPropPath,String objDbPath,String sprDbPath)
         {
+            this.allowTextureReplace = allowTextureReplace;
             FarcPack.Program.Main1(new string[] {@moduleIdPath});
             string[] moduleid = File.ReadAllLines(@moduleIdPath.Substring(0, @moduleIdPath.Length - 5)+ @"\gm_module_id.bin");
             Directory.Delete(@moduleIdPath.Substring(0, @moduleIdPath.Length - 5), true);
@@ -78,7 +81,6 @@ namespace Test
 
         public void loopObjsetFolder(string objsetpath)
         {
-            createNewLogs(objsetpath);
             var files = Directory.GetFiles(objsetpath, "*.farc");
             List<String> items = new List<string>();
             foreach (var file in files)
@@ -86,6 +88,7 @@ namespace Test
                 String farcName = file.ToString().Replace(objsetpath+"\\", "", StringComparison.InvariantCultureIgnoreCase);
                 string cha = farcName.Substring(0, 3);
                 string farcName1 = farcName.Replace(".farc", "");
+                if (farcName1.Substring(6).Equals("000")) continue;
                 switch (farcType(farcName))
                 {
                     case 0:
@@ -102,14 +105,18 @@ namespace Test
             }
             foreach (String s in items)
             {
+                //额外配件的信息
                 String cha = s.Substring(0, 3);
                 int chano =Int32.Parse( s.Replace(cha + "itm", ""));
                 CharacterItemBean cib = copyItemByNo(getStandardName(cha), chano);
+                //遍历添加的模组
                 foreach (ModuleLogBean mlb in logs.modules)
+                    //此模组与额外配件角色对应
                     if(mlb.newModule.chara.Equals(getStandardName(cha),StringComparison.InvariantCultureIgnoreCase))
-                    foreach (ItemBean ib in findCharactor(mlb.newModule.chara).findCosById(mlb.newCos.id).item)
-                        if (ib.item.Equals(chano.ToString()))
-                            ib.item = cib.no.ToString();
+                        //替换配件
+                        foreach (ItemBean ib in findCharactor(mlb.newModule.chara).findCosById(mlb.newCos.id).item)
+                            if (ib.item.Equals(chano.ToString()))
+                                ib.item = cib.no.ToString();
 
 
             }
@@ -142,19 +149,34 @@ namespace Test
                     f = copy(oldSP, newSP, newFarcRomPath + @"\rom\skin_param", officialMdataPath[i] + @"\rom\skin_param", outputPath + @"\MZZZ\rom\skin_param");
                     if (f == 0) break;
                 }
-                if (f == -1) Console.WriteLine(oldSP+"-->"+newSP);
+                //if (f == -1) Console.WriteLine(oldSP+"-->"+newSP);
             }
         }
 
-        public void copyFarc(string newFarcRomPath,string outputPath)
+        public void copyFarc(string newFarcRomPath,string[] officialMdataPath,string outputPath)
         {
             foreach(ItemLogBean ilb in logs.items)
             {
                 String oldfarc = ilb.oldItem.objset[0].objset.ToLower() + ".farc";
+                //脸部复制原始脸
+                if (ilb.oldItem.dataObjUid[0].uid.Equals("NULL") && (!allowTextureReplace))
+                    oldfarc = ilb.newItem.objset[0].objset.Substring(0, 6).ToLower() + "000.farc";
                 String newfarc = ilb.newItem.objset[0].objset.ToLower() + ".farc";
-                int f = copy(oldfarc, newfarc, newFarcRomPath + @"\rom\objset", newFarcRomPath + @"\rom\objset", outputPath + @"\MZZZ\rom\objset");
-                if (f == -1) Console.WriteLine(oldfarc + "-->" + newfarc);
-                else if(f == 0)
+                
+                if (ilb.isTextureReplace) Console.WriteLine("Need to manually replace Texture: " + newfarc);
+                
+                int f = 0;
+                foreach (string str in officialMdataPath)
+                {
+                    f = copy(oldfarc, newfarc, newFarcRomPath + @"\rom\objset", str + @"\rom\objset", outputPath + @"\MZZZ\rom\objset");
+                    if (f == 0) break;
+                }
+
+                if (f == -1)
+                {
+                     //Console.WriteLine(oldfarc + "-->" + newfarc);
+                }
+                else if (f == 0)
                 {
                     String file = outputPath + @"\MZZZ\rom\objset\" + newfarc;
                     String folder = file.Substring(0, file.Length - 5);
@@ -162,10 +184,13 @@ namespace Test
                     FileInfo fi = new FileInfo(folder + @"\" + oldfarc.Substring(0, oldfarc.Length - 5) + "_obj.bin"); //旧名
                     fi.MoveTo(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin");//新名
 
-                    String oldMeshName = ilb.oldItem.dataObjUid[0].uid.ToLower();
-                    String newMeshName = ilb.newItem.dataObjUid[0].uid.ToLower();
-                    int i = setMeshNameAndId(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin", oldMeshName, newMeshName);
-                    if (i == -1) Console.WriteLine(oldMeshName + "->" + newMeshName);
+                    if (!ilb.oldItem.dataObjUid[0].uid.Equals("NULL") && (!allowTextureReplace))
+                    {
+                        String oldMeshName = ilb.oldItem.dataObjUid[0].uid.ToLower();
+                        String newMeshName = ilb.newItem.dataObjUid[0].uid.ToLower();
+                        int i = setMeshNameAndId(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin", oldMeshName, newMeshName);
+                        if (i == -1) Console.WriteLine(oldMeshName + "->" + newMeshName);
+                    }
 
                     fi = new FileInfo(folder + @"\" + oldfarc.Substring(0, oldfarc.Length - 5) + "_tex.bin"); //旧名
                     fi.MoveTo(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_tex.bin");//新名
@@ -256,8 +281,7 @@ namespace Test
             String path2 = localFilePath1 +@"\"+ fileName;
             String savePath = saveFilePath + @"\" + newFileName;
             Exception e1 = new Exception();
-            try
-            {
+            if (!File.Exists(savePath)) {
                 if (File.Exists(path1))
                 {
                     FileInfo file1 = new FileInfo(path1);
@@ -269,9 +293,7 @@ namespace Test
                     FileInfo file1 = new FileInfo(path2);
                     file1.CopyTo(savePath);
                     return 0;
-                }
-            }catch(IOException e){
-                e1 = e; 
+                } 
             }
             if (e1.Message.Contains("already exists")) return 1;
             return -1;
@@ -379,20 +401,18 @@ namespace Test
 
             copyModuleWithNewBody(getStandardName(farcName.Substring(0, 3)), Int32.Parse(farcName.Substring(6)), name);
         }
-        public CharacterItemBean copyItemByNo(String charactor,int no,int itemid = -1)
+        public CharacterItemBean copyItemByNo(String charactor,int no,int itemid = -1,Boolean isTextureReplace = false)
             //复制角色零件
         {
             //复制item
             CharacterTbl chaTbl = findCharactor(charactor);
             CharacterItemBean newitem = new CharacterItemBean(chaTbl.findItemByNo(no));
             String oriUid = newitem.dataObjUid[0].uid;
-            if (newitem.attr != 1)
-                //换色的添加原始模组
-                return copyItemByNo(charactor, newitem.org_itm, itemid);
             newitem.name = newitem.name + " NEW";
+
             String objsetName = "";
             if (itemid == -1)
-            { 
+            {
                 //添加普通角色配件
                 newitem.no = chaTbl.lastItemNo + 1;
                 objsetName = objdb.getCharacterNameUpper(charactor, 1);
@@ -401,29 +421,47 @@ namespace Test
             {
                 //添加通用配件，因为要指定编号
                 newitem.no = itemid;
-                objsetName = "cmnitm"+itemid.ToString();
+                objsetName = "cmnitm" + itemid.ToString();
             }
-
             newitem.objset[0].objset = objsetName;
-            newitem.dataObjUid[0].uid = objsetName
-                + newitem.dataObjUid[0].uid.Substring(newitem.dataObjUid[0].uid.IndexOf('_'));
-            //避免meshname过长
-            if ((newitem.dataObjUid[0].uid.Length == 32)&&(oriUid.Length < 32)) 
-                newitem.dataObjUid[0].uid = newitem.dataObjUid[0].uid.Substring(0, newitem.dataObjUid[0].uid.Length - 1);
+
+            if (newitem.attr != 1)
+                //换色
+                if (!allowTextureReplace)
+                    //不允许换色
+                    if (newitem.dataObjUid[0].uid.Equals("NULL"))
+                    {
+                        //脸,不能直接复制org_itm因为没有数据
+                        //此外在copyFarc也要特殊处理
+                        newitem.attr = 1;
+                        newitem.haveTexChg = false;
+                        newitem.haveTexOrg = false;
+                        newitem.haveTexLength = false;
+                        isTextureReplace = true;
+                    }
+                    else
+                        //复制原色零件
+                        return copyItemByNo(charactor, newitem.org_itm, itemid,true);
+                else
+                {
+                    //允许换色
+                    //copyFarc也要特殊处理
+                }
+
+            if (! newitem.dataObjUid[0].uid.Equals("NULL"))
+            {
+                newitem.dataObjUid[0].uid = objsetName
+                    + newitem.dataObjUid[0].uid.Substring(newitem.dataObjUid[0].uid.IndexOf('_'));
+                //避免meshname过长
+                if ((newitem.dataObjUid[0].uid.Length == 32) && (oriUid.Length < 32))
+                    newitem.dataObjUid[0].uid = newitem.dataObjUid[0].uid.Substring(0, newitem.dataObjUid[0].uid.Length - 1);
+            }
 
             chaTbl.addItem(newitem);
             //复制objdb
             objdb.add(newitem);
-            logs.items.Add(new ItemLogBean(chaTbl.findItemByNo(no), newitem));
+            logs.items.Add(new ItemLogBean(chaTbl.findItemByNo(no), newitem,isTextureReplace));
             return newitem;
-        }
-        public void copyCustomizeItemInAllParts(int cstmItemNo,String name)
-            //复制配件
-        {
-            //复制cstmitem
-            //添加objdb
-            //添加sprdb
-            //循环添加chatbl
         }
         public void copyCustomizeItemByObjId(int cstmItemNo,String name)
         {
