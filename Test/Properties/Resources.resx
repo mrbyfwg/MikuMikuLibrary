@@ -120,6 +120,8 @@
   <data name="configText" xml:space="preserve">
     <value>#将数个模组替换mod合并为一个mod, 并添加模型槽位
 #Merge several module replacement mods into one mod and add model slots
+#目前无法自动添加材质替换类零件，需要手动替换材质
+#Currently it is not possible to automatically add texture replacement items, you need to manually replace the texture
 
 #!!!!!所有路径大小写敏感!!!!!
 #!!!!!All paths are case sensitive!!!!!
