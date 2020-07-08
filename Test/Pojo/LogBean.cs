@@ -54,10 +54,12 @@ namespace Test.Pojo
     {
         public CharacterItemBean oldItem;
         public CharacterItemBean newItem;
-        public ItemLogBean(CharacterItemBean oldItem,CharacterItemBean newItem)
+        public Boolean isTextureReplace;
+        public ItemLogBean(CharacterItemBean oldItem,CharacterItemBean newItem,Boolean isTextureReplace = false)
         {
             this.oldItem = oldItem;
             this.newItem = newItem;
+            this.isTextureReplace = isTextureReplace;
         }
     }
     class CSTMItemLogBean 

@@ -16,12 +16,7 @@ namespace Test
         {
             List<String> result = new List<string>();
             result.Add("From: "+farcPath);
-            //"ModuleName=        " + moduleName, 
-            //"SpiritFarcName=    " + sprName, 
-            //"OldObjsetFarcName= " + oldObjsetName,
-            //"ObjsetFarcName=    " + objsetName, 
-            //"MeshName=          " + meshName,
-            //"MeshID=            " + meshId,
+
             result.Add("NewModules:");
             foreach (ModuleLogBean mlb in modules)
             {
