@@ -1,11 +1,8 @@
-﻿using Microsoft.VisualBasic;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Reflection;
+
 using System.Text;
 using Test.Pojo;
 
@@ -159,11 +156,11 @@ namespace Test
             {
                 String oldfarc = ilb.oldItem.objset[0].objset.ToLower() + ".farc";
                 //脸部复制原始脸
-                if (ilb.oldItem.dataObjUid[0].uid.Equals("NULL") && (!allowTextureReplace))
+                if (ilb.oldItem.sub_id == 24 && (!allowTextureReplace))
                     oldfarc = ilb.newItem.objset[0].objset.Substring(0, 6).ToLower() + "000.farc";
                 String newfarc = ilb.newItem.objset[0].objset.ToLower() + ".farc";
                 
-                if (ilb.isTextureReplace) Console.WriteLine("Need to manually replace Texture: " + newfarc);
+                if (ilb.isTextureReplace) Console.WriteLine("Need to manually replace Texture: " +oldfarc+"-->"+ newfarc);
                 
                 int f = 0;
                 foreach (string str in officialMdataPath)
@@ -184,7 +181,7 @@ namespace Test
                     FileInfo fi = new FileInfo(folder + @"\" + oldfarc.Substring(0, oldfarc.Length - 5) + "_obj.bin"); //旧名
                     fi.MoveTo(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin");//新名
 
-                    if (!ilb.oldItem.dataObjUid[0].uid.Equals("NULL") && (!allowTextureReplace))
+                    if (ilb.oldItem.sub_id != 24 && (!allowTextureReplace))
                     {
                         String oldMeshName = ilb.oldItem.dataObjUid[0].uid.ToLower();
                         String newMeshName = ilb.newItem.dataObjUid[0].uid.ToLower();
@@ -300,7 +297,7 @@ namespace Test
         }
         public void createPath(String str)
         {
-            if (Directory.Exists(str + @"\MZZZ")) throw new Exception("DirectoryExists");
+            if (Directory.Exists(str + @"\MZZZ")) throw new Exception(str + @"\MZZZ Exists");
             DirectoryInfo di = new DirectoryInfo(@str + @"\MZZZ\rom\objset");
             di.Create();
             di = new DirectoryInfo(@str + @"\MZZZ\rom\gm_customize_item_tbl");
@@ -392,7 +389,7 @@ namespace Test
         {
             CharacterTbl chaTbl = findCharactor(charactor);
             List<CosBean> coslist = chaTbl.findCosByItemId(bodyId);
-            if (coslist.Count == 0) throw new Exception("BodyNotFound");
+            if (coslist.Count == 0) throw new Exception("BodyItemId"+bodyId+"NotFound");
             ModuleBean mb = modules.findModuleByCos(charactor,StringCut.cosId2String(coslist[0].id));
             copyModuleWithNewBody(mb.id,name);
         }
@@ -429,7 +426,7 @@ namespace Test
                 //换色
                 if (!allowTextureReplace)
                     //不允许换色
-                    if (newitem.dataObjUid[0].uid.Equals("NULL"))
+                    if (newitem.sub_id == 24)
                     {
                         //脸,不能直接复制org_itm因为没有数据
                         //此外在copyFarc也要特殊处理
@@ -448,7 +445,7 @@ namespace Test
                     //copyFarc也要特殊处理
                 }
 
-            if (! newitem.dataObjUid[0].uid.Equals("NULL"))
+            if (newitem.sub_id != 24)
             {
                 newitem.dataObjUid[0].uid = objsetName
                     + newitem.dataObjUid[0].uid.Substring(newitem.dataObjUid[0].uid.IndexOf('_'));
@@ -500,7 +497,7 @@ namespace Test
                 case "len":
                     return lenTbl;
                 default:
-                    throw new Exception("NonStandardCharactorName");
+                    throw new Exception(charactor + "is not a standerd character name");
             }
         }
         private String getStandardName(String charactor)
@@ -528,7 +525,7 @@ namespace Test
                 case "len":
                     return "len";
                 default:
-                    throw new Exception("NonStandardCharactorName");
+                    throw new Exception(charactor + "is not a short character name");
             }
         }
         private int findLastItemId()

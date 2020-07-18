@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Test
 {
@@ -121,7 +119,7 @@ namespace Test
         public void add(ModuleBean mb)
         {
             mb.index = lastIndex + 1;
-            if (moduleList[mb.index] != null) throw new Exception("ModuleIndexUsed");
+            if (moduleList[mb.index] != null) throw new Exception(mb.index+" ModuleIndexUsed");
             else moduleList[mb.index] = new ModuleBean();
             moduleList[mb.index] = mb;
             length++;
@@ -135,14 +133,14 @@ namespace Test
             foreach (ModuleBean m in moduleList)
                 if(m.chara.Equals(charactor.ToUpper()))
                     if (m.cos == Cos) return m;
-            throw new Exception("FindNoModuleWithCosId");
+            throw new Exception(Cos+" FindNoModuleWithCos");
         }
 
         public ModuleBean findModuleById(int moduleId)
         {
             foreach (ModuleBean m in moduleList)
                 if (m.id == moduleId) return m;
-            throw new Exception("ModuleIdNotFound");
+            throw new Exception(moduleId+" ModuleIdNotFound");
         }
     }
 }

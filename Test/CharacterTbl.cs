@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
+
 using Test.Pojo;
 
 namespace Test
@@ -240,7 +239,7 @@ namespace Test
         public void addCos(CosBean newCos)
         {
             newCos.index = lastCosIndex + 1;
-            if (cosList[newCos.index] != null) throw new Exception("ModuleIndexUsed");
+            if (cosList[newCos.index] != null) throw new Exception("ModuleIndex"+newCos.index+"Used");
             else cosList[newCos.index] = new CosBean();
             cosList[newCos.index] = newCos;
             cosLength++;
@@ -413,18 +412,18 @@ namespace Test
                         if (c.sub_id == 10) return c.no;
                         break;
                     }
-            throw new Exception("BodyNotFound");
+            throw new Exception(cos.item+" BodyNotFound");
         }
         public CharacterItemBean findItemByNo(int no)
         {
             foreach (CharacterItemBean ci in itemList)
                 if (ci.no == no) return ci;
-            throw new Exception("ItemNoNotFound");
+            throw new Exception(no+" ItemNoNotFound");
         }
         public void addItem(CharacterItemBean newItem)
         {
             newItem.index = lastItemIndex + 1;
-            if (itemList[newItem.index] != null) throw new Exception("ModuleIndexUsed");
+            if (itemList[newItem.index] != null) throw new Exception(newItem+" ModuleIndexUsed");
             else itemList[newItem.index] = new CharacterItemBean();
             itemList[newItem.index] = newItem;
             itemLength++;
@@ -437,7 +436,7 @@ namespace Test
                 if (!cib.haveTexChg)
                     if (cib.objset[0].objset.Equals(objsetName))
                         return cib.dataObjUid[0].uid;
-            throw new Exception("ObjsetNameNotFound");
+            throw new Exception(objsetName+" ObjsetNameNotFound");
         }
     }
 }

@@ -133,7 +133,7 @@ namespace Test
             {
                 if (cib.id == id) return cib;
             }
-            throw new Exception("CSTMItemNotFound");
+            throw new Exception(id+" CSTMItemNotFound");
         }
         public CustomizeItemBean findCstmItemByObjId(int obj_Id)
         {
@@ -141,13 +141,13 @@ namespace Test
             {
                 if (cib.obj_id == obj_Id) return cib;
             }
-            throw new Exception("CSTMItemNotFound");
+            throw new Exception(obj_Id+" CSTMItemNotFound");
         }
         public void add(CustomizeItemBean cib)
         {
             cib.index = lastIndex + 1;
             if (itemList[cib.index] == null) itemList[cib.index] = new CustomizeItemBean();
-            else throw new Exception("UsedCustomizeItemIndex");
+            else throw new Exception(cib.index+" UsedCustomizeItemIndex");
             itemList[cib.index] = cib;
             if (cib.index > lastIndex) lastIndex = cib.index;
             if (cib.sort_index > lastSort_index) lastSort_index = cib.sort_index;
