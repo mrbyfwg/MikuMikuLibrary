@@ -13,9 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CliTools\DatabaseConverter\DatabaseConverter.csproj" />
     <ProjectReference Include="..\CliTools\FarcPack\FarcPack.csproj" />
-    <ProjectReference Include="..\CliTools\TxpConverter\TxpConverter.csproj" />
     <ProjectReference Include="..\MikuMikuLibrary\MikuMikuLibrary.csproj" />
-    <ProjectReference Include="..\MikuMikuModel\MikuMikuModel.csproj" />
   </ItemGroup>
 
   <ItemGroup>

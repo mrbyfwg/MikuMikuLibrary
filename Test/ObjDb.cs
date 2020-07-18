@@ -1,11 +1,7 @@
-﻿using MikuMikuLibrary.Databases;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Xml.Linq;
-using System.Xml.XPath;
 
 namespace Test
 {
@@ -111,7 +107,7 @@ namespace Test
             foreach (XElement x in objList)
                 if (x.Element("Name").Value.Equals(name,StringComparison.InvariantCultureIgnoreCase))
                     return x.Element("Meshes").Element("MeshEntry").Element("Name").Value;
-            throw new Exception("ObjsetNameNotFound");
+            throw new Exception(name+" ObjsetNameNotFound");
         }
         public List<String> toString()
         {
@@ -147,7 +143,7 @@ namespace Test
                 case "len":
                     return "LENITM" + (lastLenNo + i).ToString();
                 default:
-                    throw new Exception("NonStandardCharactorName");
+                    throw new Exception(character+ " NonStandardCharactorName");
             }
         }
     }
