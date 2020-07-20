@@ -236,6 +236,18 @@ namespace Test
             }
         }
 
+        public void updataItemByNo(CharacterItemBean newItem)
+        {
+            //根据no查找item，并更新其他数据
+            for (int i = 0; i <= itemList.Length - 1; i++)
+                if ((itemList[i] != null) && (itemList[i].no == newItem.no))
+                {
+                    itemList[i] = new CharacterItemBean(newItem);
+                    return;
+                }
+            throw new Exception("itemNoNotFound");
+        }
+
         public void addCos(CosBean newCos)
         {
             newCos.index = lastCosIndex + 1;

@@ -53,12 +53,16 @@ namespace Test.Pojo
     {
         public CharacterItemBean oldItem;
         public CharacterItemBean newItem;
-        public Boolean isTextureReplace;
-        public ItemLogBean(CharacterItemBean oldItem,CharacterItemBean newItem,Boolean isTextureReplace = false)
+        public Boolean isTexReplaceAndCopyOri;
+        public String charactor;
+        public int oldMeshId;
+        public ItemLogBean(CharacterItemBean oldItem,int oldMeshId,CharacterItemBean newItem,String charactor,Boolean isTextureReplace = false)
         {
             this.oldItem = oldItem;
+            this.oldMeshId = oldMeshId;
             this.newItem = newItem;
-            this.isTextureReplace = isTextureReplace;
+            this.charactor = charactor;
+            this.isTexReplaceAndCopyOri = isTextureReplace;
         }
     }
     class CSTMItemLogBean 
