@@ -192,5 +192,15 @@ namespace Test
             if (haveType) result.Add(header + ".type=" + type.ToString());
             return result;
         }
+        public String getObjsetName(Boolean allowTextureReplace)
+        {
+            
+            String oldfarc = objset[0].objset.ToLower();
+            if (!allowTextureReplace) return oldfarc;
+            if (objsetLength == 2)
+                oldfarc = objset[1].objset.ToLower();
+            if (objsetLength >= 3) Console.WriteLine("objsetLength >= 3 " + name);
+            return oldfarc;
+        }
     }
 }

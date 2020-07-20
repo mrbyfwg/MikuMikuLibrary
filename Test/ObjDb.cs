@@ -7,7 +7,9 @@ namespace Test
 {
     class ObjDb
     {
+        public XElement mdata_obj;
         public XElement obj;
+        public IEnumerable<XElement> mdata_objList;
         public IEnumerable<XElement> objList;
         public int lastMikNo = 1000;
         public int lastLukNo = 1000;
@@ -20,25 +22,28 @@ namespace Test
         public int lastKaiNo = 1000;
         public int lastLenNo = 1000;
         public int lastId = -1;
-        public ObjDb(String str)
+        public ObjDb(String mdataObjPath,String objPath)
         {
-            obj = XElement.Load(@str);
-            this.objList = from el in obj.Element("Objects").Elements("ObjectEntry")
+            mdata_obj = XElement.Load(mdataObjPath);
+            mdata_obj.Element("Unknown").Value = "99999";
+            obj = XElement.Load(objPath);
+            this.mdata_objList = from el in mdata_obj.Element("Objects").Elements("ObjectEntry")
                            select el;
-
-            foreach (XElement x in objList)
+            this.objList = from el in obj.Element("Objects").Elements("ObjectEntry")
+                                 select el;
+            foreach (XElement x in mdata_objList)
             {
                 if (Int32.Parse(x.Element("Id").Value) > lastId) lastId = Int32.Parse(x.Element("Id").Value);
                 updateLastChaNo(x.Element("Name").Value);
             }
-            obj.Element("Unknown").Value = "9999";
+            mdata_obj.Element("Unknown").Value = "9999";
         }
         private void updateLastChaNo(String name)
         {
             if ((name.Length >= 7)&&(name.Substring(3,3).Equals("itm",StringComparison.InvariantCultureIgnoreCase)))
             {
                 int value = Int32.Parse(name.Substring(6));
-                String key = name.Substring(0, 6);
+                String key = name.Substring(0, 6).ToUpper();
                 switch (key)
                 {
                     case "MIKITM":
@@ -76,15 +81,15 @@ namespace Test
         }
         public void add(String name,int id,String fileName,String TexFileName,String ArcFileName,String MeshName,int MeshId)
         {
-            objList.Last().AddAfterSelf(new XElement("ObjectEntry",
-                                           new XElement("Name",name),
+            mdata_objList.Last().AddAfterSelf(new XElement("ObjectEntry",
+                                           new XElement("Name",name.ToUpper()),
                                            new XElement("Id",id),
-                                           new XElement("FileName",fileName),
-                                           new XElement("TextureFileName",TexFileName),
-                                           new XElement("ArchiveFileName",ArcFileName),
+                                           new XElement("FileName",fileName.ToLower()),
+                                           new XElement("TextureFileName",TexFileName.ToLower()),
+                                           new XElement("ArchiveFileName",ArcFileName.ToLower()),
                                            new XElement("Meshes",
                                                new XElement("MeshEntry",
-                                                   new XElement("Name",MeshName),
+                                                   new XElement("Name",MeshName.ToUpper()),
                                                    new XElement("Id",MeshId)
                                                            )
                                                        )
@@ -93,25 +98,32 @@ namespace Test
             if (id > lastId) lastId = id;
             updateLastChaNo(name);
         }
-        public String add(CharacterItemBean newItem)
+
+        public int getMeshId(String name)
         {
-            String nameUP = newItem.objset[0].objset;
-            String name = nameUP.ToLower();
-            String meshName = newItem.dataObjUid[0].uid;
-            add(nameUP, lastId + 1, name + "_obj.bin", name + "_tex.bin", name + ".farc", meshName, 0);
-            return name;
+
+            foreach (XElement x in mdata_objList)
+                if (x.Element("Name").Value.Equals(name,StringComparison.InvariantCultureIgnoreCase))
+                    return Int32.Parse(x.Element("Meshes").Element("MeshEntry").Element("Id").Value);
+            foreach (XElement x in objList)
+                if (x.Element("Name").Value.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return Int32.Parse(x.Element("Meshes").Element("MeshEntry").Element("Id").Value);
+            throw new Exception(name+" ObjsetNameNotFound");
         }
         public String getMeshName(String name)
         {
 
-            foreach (XElement x in objList)
-                if (x.Element("Name").Value.Equals(name,StringComparison.InvariantCultureIgnoreCase))
+            foreach (XElement x in mdata_objList)
+                if (x.Element("Name").Value.Equals(name, StringComparison.InvariantCultureIgnoreCase))
                     return x.Element("Meshes").Element("MeshEntry").Element("Name").Value;
-            throw new Exception(name+" ObjsetNameNotFound");
+            foreach (XElement x in objList)
+                if (x.Element("Name").Value.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return x.Element("Meshes").Element("MeshEntry").Element("Name").Value;
+            throw new Exception(name + " ObjsetNameNotFound");
         }
         public List<String> toString()
         {
-            return new List<String>() { "<?xml version=\"1.0\" encoding=\"utf-8\"?>", obj.ToString() };
+            return new List<String>() { "<?xml version=\"1.0\" encoding=\"utf-8\"?>", mdata_obj.ToString() };
         }
         public String getCharacterNameUpper(String character)
         {

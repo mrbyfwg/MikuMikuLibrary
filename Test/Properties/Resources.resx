@@ -120,28 +120,42 @@
   <data name="configText" xml:space="preserve">
     <value>#将数个模组替换mod合并为一个mod, 并添加模型槽位
 #Merge several module replacement mods into one mod and add model slots
-#目前无法自动添加材质替换类零件，需要手动替换材质
-#Currently it is not possible to automatically add texture replacement items, you need to manually replace the texture
 
 #!!!!!所有路径大小写敏感!!!!!
 #!!!!!All paths are case sensitive!!!!!
                
-#以下五个文件的选择优先级
+#以下四个文件的选择优先级
 #1,有带mdata_*前缀的优先选择, 选择靠后的M***\rom文件夹中的mdata_*
 #2,没有带mdata_*前缀的, 选择靠后M***\rom文件夹中不带前缀的
 #3,都没有, 选择游戏基础rom文件夹中的
-#Selection priority of the following five files
+#Selection priority of the following four files
 #1, preferentially select files with the prefix of mdata_*, preferentially select the files of mdata_* in the lower M***\rom folder
 #2, there is no the mdata_* prefix, select the unprefixed files in the lower M***\rom folder
 #3, Finally, select the unprefixed file in the game's basic rom folder
 gm_module_tbl = C:\PDAFT\MDATA\MPF2\rom\mdata_gm_module_tbl.farc 
 gm_customize_item_tbl = C:\PDAFT\rom\gm_customize_item_tbl.farc
 chritm_prop = C:\PDAFT\MDATA\MPF2\rom\mdata_chritm_prop.farc
-obj_db = C:\PDAFT\MDATA\MPF2\rom\objset\mdata_obj_db.bin
 spr_db = C:\PDAFT\MDATA\MPF2\rom\2d\mdata_spr_db.bin
+
+#以下两个文件优先选靠后M***\rom\objset中的，都没有则选择游戏基础rom\objset中的
+#The following two files choose those in the lower M***\rom\objset first, if there is none, choose the game basic rom\objset
+obj_db = C:\PDAFT\rom\objset\obj_db.bin
+mdata_obj_db = C:\PDAFT\MDATA\MPF2\rom\objset\mdata_obj_db.bin
+
+#是否允许贴图替换
+#Whether to allow texture replacement
+#true: 贴图替换型零件只复制替换贴图farc，优点是省事，缺点是与原模型不能同时使用
+#true: The texture replacement items only copies the replacement texture farc. The advantage is that it saves trouble, 
+#but the disadvantage is that it cannot be used at the same time as the original model.
+#false: 贴图替换型零件复制原色farc，需要手动替换材质，但是能完美兼容
+#false: The original color farc is copied for the texture replacement items, and the texture needs to be replaced manually, 
+#but it is perfectly compatible
+allowTextureReplace = true
+
 #输出文件夹, 会在此路径自动下生成MZZZ, 保证此路径下没有MZZZ
 #Output folder, MZZZ will be automatically generated under this path, ensure that there is no MZZZ under this path
 outputFolder = C:\PDAFT\MDATA
+
 #你想要合并的模组替换mod, 只需要保证每个单独的mod都是可用的, 允许多个mod之间存在冲突
 #Mods you want to merge, only need to ensure that each individual mod is available, allowing conflicts between multiple mods
 modsPathList = C:\PDAFT\MDATAS\MSNB
@@ -151,9 +165,12 @@ modsPathList = C:\PDAFT\MDATAS\Mkim
 modsPathList = C:\PDAFT\MDATAS\MnFT
 modsPathList = C:\PDAFT\MDATAS\MnFT1
 modsPathList = C:\PDAFT\MDATAS\M400
+modsPathList = C:\PDAFT\MDATAS\MPF3
+
 #基础游戏路径, diva.exe所在路径
 #Base game path, the path where diva.exe is located
 baseGamePath = C:\PDAFT
+
 #官方Mdata相对路径, info.txt所在路径
 #Official Mdata relative path, path where info.txt is located
 officialMdataPathList = \MDATA\m215

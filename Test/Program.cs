@@ -12,8 +12,10 @@ namespace Test
         static string moduleIdPath; 
         static string cstmItemIdPath;
         static string chritmPropPath;
-        static string objDbPath;
         static string sprDbPath;
+
+        static string mdataObjDbPath;
+        static string objDbPath;
         //output folder path
         static string outputPath; 
         //mods you want merge
@@ -26,7 +28,7 @@ namespace Test
         {
             try{
                 readConfig();
-                SlotEditor se = new SlotEditor(moduleIdPath, cstmItemIdPath, chritmPropPath, objDbPath, sprDbPath);
+                SlotEditor se = new SlotEditor(moduleIdPath, cstmItemIdPath, chritmPropPath, mdataObjDbPath,objDbPath, sprDbPath, allowTextureReplace);
                 se.createPath(outputPath);
                 for (int i = 0; i <= newFarcRomPath.Length - 1; i++)
                 {
@@ -37,7 +39,8 @@ namespace Test
                     se.copySkinParam(newFarcRomPath[i], officialMdataPath, outputPath);
                     se.getLogs(outputPath);
                 }
-                se.output(outputPath);
+            se.output(outputPath);
+
             }
             catch (Exception e)
             {
@@ -85,6 +88,9 @@ namespace Test
                     case "obj_db":
                         objDbPath = value;
                         break;
+                    case "mdata_obj_db":
+                        mdataObjDbPath = value;
+                        break;
                     case "spr_db":
                         sprDbPath = value;
                         break;
@@ -102,19 +108,19 @@ namespace Test
                         if (!value[0].Equals('\\')) str = "\\";
                         dlcList.Add(str + value);
                         break;
-                    //case "allowtexturereplace":
-                    //    switch (value.ToLower())
-                    //    {
-                    //        case "true":
-                    //            allowTextureReplace = true;
-                    //            break;
-                    //        case "false":
-                    //            allowTextureReplace = false;
-                    //            break;
-                    //        default:
-                    //            throw new Exception(line+" ERROR");
-                    //    }
-                    //    break;
+                    case "allowtexturereplace":
+                        switch (value.ToLower())
+                        {
+                            case "true":
+                                allowTextureReplace = true;
+                                break;
+                            case "false":
+                                allowTextureReplace = false;
+                                break;
+                            default:
+                                throw new Exception(line + " ERROR");
+                        }
+                        break;
                     default:
                         Console.WriteLine("undefine:" + key);
                         break;

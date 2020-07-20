@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 
@@ -27,8 +28,9 @@ namespace Test
         ObjDb objdb;
         SprDb sprdb;
         Logs logs;
-        Boolean allowTextureReplace = false;//暂时无法实现
-        public SlotEditor(String moduleIdPath,String cstmItemIdPath,String chritmPropPath,String objDbPath,String sprDbPath)
+        Boolean allowTextureReplace;
+        public SlotEditor(String moduleIdPath,String cstmItemIdPath,String chritmPropPath,
+            String mdataObjDbPath, String objDbPath,String sprDbPath, Boolean allowTextureReplace = false)
         {
             this.allowTextureReplace = allowTextureReplace;
             FarcPack.Program.Main1(new string[] {@moduleIdPath});
@@ -52,9 +54,12 @@ namespace Test
             string[] tet = File.ReadAllLines(@chritmPropPath.Substring(0, @chritmPropPath.Length - 5) + @"\tetitm_tbl.txt");
             Directory.Delete(@chritmPropPath.Substring(0, @chritmPropPath.Length - 5), true);
 
-            DatabaseConverter.Program.Main1(new string[] { @objDbPath });
-            objdb = new ObjDb(@objDbPath.Substring(0, @objDbPath.Length - 4) + ".xml");
-            File.Delete(@objDbPath.Substring(0, @objDbPath.Length - 4) + ".xml");
+            DatabaseConverter.Program.Main1(new string[] { mdataObjDbPath });
+            DatabaseConverter.Program.Main1(new string[] { objDbPath });
+            objdb = new ObjDb(mdataObjDbPath.Substring(0, mdataObjDbPath.Length - 4) + ".xml",
+                objDbPath.Substring(0, objDbPath.Length - 4) + ".xml");
+            File.Delete(mdataObjDbPath.Substring(0, mdataObjDbPath.Length - 4) + ".xml");
+            File.Delete(objDbPath.Substring(0, objDbPath.Length - 4) + ".xml");
 
             DatabaseConverter.Program.Main1(new string[] { @sprDbPath });
             sprdb = new SprDb(@sprDbPath.Substring(0, @sprDbPath.Length - 4) + ".xml");
@@ -78,6 +83,7 @@ namespace Test
 
         public void loopObjsetFolder(string objsetpath)
         {
+
             var files = Directory.GetFiles(objsetpath, "*.farc");
             List<String> items = new List<string>();
             foreach (var file in files)
@@ -90,16 +96,17 @@ namespace Test
                 {
                     case 0:
                         int no = mikTbl.findItemByNo(Int32.Parse(farcName1.Replace("cmnitm", ""))).no;
-                        copyCustomizeItemByObjId(no, "");
+                        copyCustomizeItemByObjId(no, " "+logs.farcPath.Substring(logs.farcPath.Length - 4));
                         break;
                     case 1:
-                        copyModuleWithNewBody(farcName1, "");
+                        copyModuleWithNewBody(farcName1, " "+logs.farcPath.Substring(logs.farcPath.Length - 4));
                         break;
                     case 2:
                         items.Add(farcName1);
                         break;
                 }
             }
+            //不止替换身体的模组
             foreach (String s in items)
             {
                 //额外配件的信息
@@ -114,9 +121,22 @@ namespace Test
                         foreach (ItemBean ib in findCharactor(mlb.newModule.chara).findCosById(mlb.newCos.id).item)
                             if (ib.item.Equals(chano.ToString()))
                                 ib.item = cib.no.ToString();
-
-
             }
+            //特殊处理换色零件
+            if (allowTextureReplace)
+                foreach (ItemLogBean ilb in logs.items)
+                    if ((ilb.newItem.attr != 1) && (ilb.newItem.sub_id != 24))
+                        //非脸换色
+                        foreach (ItemLogBean ilb2 in logs.items) 
+                            if((ilb2.newItem.attr == 1)&&(ilb.newItem.objset[0].objset.Equals(ilb2.oldItem.objset[0].objset)))
+                                //是原件&&旧原件name==新原件name
+                            {
+                                ilb.newItem.objset[0].objset = ilb2.newItem.objset[0].objset;
+                                ilb.newItem.dataObjUid[0].uid = ilb2.newItem.dataObjUid[0].uid;
+                                ilb.newItem.org_itm = ilb2.newItem.no;
+                                findCharactor(ilb.charactor).updataItemByNo(ilb.newItem);
+                            }
+            
         }
         private int farcType(string farcName)
         {
@@ -137,8 +157,9 @@ namespace Test
         {
             foreach(ItemLogBean ilb in logs.items)
             {
-                String oldSP = "ext_skp_" + ilb.oldItem.dataObjUid[0].uid.ToLower() + ".txt";
-                String newSP = "ext_skp_" + ilb.newItem.dataObjUid[0].uid.ToLower() + ".txt";
+                
+                String oldSP = "ext_skp_" + objdb.getMeshName(ilb.oldItem.getObjsetName(allowTextureReplace)).ToLower() + ".txt";
+                String newSP = "ext_skp_" + objdb.getMeshName(ilb.newItem.getObjsetName(allowTextureReplace)).ToLower() + ".txt";
                 int f = 0;
                 for (int i = officialMdataPath.Length - 1; i >= 0; i--)
                 {
@@ -154,14 +175,23 @@ namespace Test
         {
             foreach(ItemLogBean ilb in logs.items)
             {
-                String oldfarc = ilb.oldItem.objset[0].objset.ToLower() + ".farc";
+                String oldfarc = ilb.oldItem.getObjsetName(allowTextureReplace).ToLower() + ".farc";
+
+                //if ((ilb.oldItem.objsetLength == 2)&&(!ilb.isTexReplaceAndCopyOri)) 
+                //    oldfarc = ilb.oldItem.objset[1].objset.ToLower() + ".farc";
+                //if (ilb.oldItem.objsetLength >= 3) Console.WriteLine("objsetLength >= 3 "+ilb.oldItem.name);
+                String newfarc = ilb.newItem.getObjsetName(allowTextureReplace).ToLower() + ".farc";
+
+                if (ilb.isTexReplaceAndCopyOri)
+                {
+                    String line = "Need to manually replace Texture: " + logs.farcPath + @"\rom\ojbset\" + oldfarc + " --> " + newfarc;
+                    Console.WriteLine(line);
+                    File.AppendAllLines(outputPath + @"\MZZZ\Manually Replace Texture List.txt", new List<String>() { line });
+                }
+
                 //脸部复制原始脸
                 if (ilb.oldItem.sub_id == 24 && (!allowTextureReplace))
                     oldfarc = ilb.newItem.objset[0].objset.Substring(0, 6).ToLower() + "000.farc";
-                String newfarc = ilb.newItem.objset[0].objset.ToLower() + ".farc";
-                
-                if (ilb.isTextureReplace) Console.WriteLine("Need to manually replace Texture: " +oldfarc+"-->"+ newfarc);
-                
                 int f = 0;
                 foreach (string str in officialMdataPath)
                 {
@@ -181,11 +211,11 @@ namespace Test
                     FileInfo fi = new FileInfo(folder + @"\" + oldfarc.Substring(0, oldfarc.Length - 5) + "_obj.bin"); //旧名
                     fi.MoveTo(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin");//新名
 
-                    if (ilb.oldItem.sub_id != 24 && (!allowTextureReplace))
+                    if (ilb.oldItem.sub_id != 24)
                     {
-                        String oldMeshName = ilb.oldItem.dataObjUid[0].uid.ToLower();
-                        String newMeshName = ilb.newItem.dataObjUid[0].uid.ToLower();
-                        int i = setMeshNameAndId(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin", oldMeshName, newMeshName);
+                        String oldMeshName = objdb.getMeshName(ilb.oldItem.getObjsetName(allowTextureReplace)).ToLower();
+                        String newMeshName = objdb.getMeshName(ilb.newItem.getObjsetName(allowTextureReplace)).ToLower();
+                        int i = setMeshNameAndId(folder + @"\" + newfarc.Substring(0, newfarc.Length - 5) + "_obj.bin", oldMeshName, ilb.oldMeshId, newMeshName);
                         if (i == -1) Console.WriteLine(oldMeshName + "->" + newMeshName);
                     }
 
@@ -362,7 +392,7 @@ namespace Test
             //更新module
             mb.id = modules.lastModuleId + 1;
             mb.sort_index = modules.lastSortIndex + 1;
-            if (name.Equals("")) { } else mb.name = name;
+            if (!name.Equals("")) mb.name = mb.name + name;
             int oriCosId =StringCut.cosString2Id(mb.cos);
             mb.cos = StringCut.cosId2String(chaTbl.lastCosId + 1);
             modules.add(mb);
@@ -398,13 +428,16 @@ namespace Test
 
             copyModuleWithNewBody(getStandardName(farcName.Substring(0, 3)), Int32.Parse(farcName.Substring(6)), name);
         }
-        public CharacterItemBean copyItemByNo(String charactor,int no,int itemid = -1,Boolean isTextureReplace = false)
+        public CharacterItemBean copyItemByNo(String charactor,int no,int itemid = -1,Boolean isTexReplaceAndCopyOri = false)
             //复制角色零件
         {
             //复制item
             CharacterTbl chaTbl = findCharactor(charactor);
             CharacterItemBean newitem = new CharacterItemBean(chaTbl.findItemByNo(no));
-            String oriUid = newitem.dataObjUid[0].uid;
+
+            String oriObjName = newitem.getObjsetName(allowTextureReplace);
+            int oriMeshNum = objdb.getMeshId(oriObjName);
+            String oriUid = objdb.getMeshName(oriObjName);
             newitem.name = newitem.name + " NEW";
 
             String objsetName = "";
@@ -420,11 +453,21 @@ namespace Test
                 newitem.no = itemid;
                 objsetName = "cmnitm" + itemid.ToString();
             }
-            newitem.objset[0].objset = objsetName;
+            //sub_id非1的都是纹理替换更新第二个objset,特殊情况attr=9不知道什么意思
+            if ((newitem.objsetLength == 1)||(!allowTextureReplace))
+                newitem.objset[0].objset = objsetName.ToUpper();
+            else
+                newitem.objset[1].objset = objsetName.ToUpper();
 
-            if (newitem.attr != 1)
-                //换色
-                if (!allowTextureReplace)
+            if((newitem.sub_id == 24)&&(newitem.objsetLength == 2))
+            {
+                //特殊处理 壱ノ桜・桜花顔 和 ctw 颜
+                String t = newitem.objset[0].objset;
+                newitem.objset[0].objset = newitem.objset[1].objset;
+                newitem.objset[1].objset = t;
+            }
+
+            if ((newitem.attr != 1)&&(!allowTextureReplace))
                     //不允许换色
                     if (newitem.sub_id == 24)
                     {
@@ -434,30 +477,41 @@ namespace Test
                         newitem.haveTexChg = false;
                         newitem.haveTexOrg = false;
                         newitem.haveTexLength = false;
-                        isTextureReplace = true;
+                        isTexReplaceAndCopyOri = true;
                     }
                     else
                         //复制原色零件
                         return copyItemByNo(charactor, newitem.org_itm, itemid,true);
-                else
-                {
-                    //允许换色
-                    //copyFarc也要特殊处理
-                }
 
-            if (newitem.sub_id != 24)
+
+            if (newitem.sub_id != 24) 
             {
-                newitem.dataObjUid[0].uid = objsetName
-                    + newitem.dataObjUid[0].uid.Substring(newitem.dataObjUid[0].uid.IndexOf('_'));
-                //避免meshname过长
-                if ((newitem.dataObjUid[0].uid.Length == 32) && (oriUid.Length < 32))
-                    newitem.dataObjUid[0].uid = newitem.dataObjUid[0].uid.Substring(0, newitem.dataObjUid[0].uid.Length - 1);
+                String uid = objsetName
+                    + oriUid.Replace(oriObjName, "", StringComparison.InvariantCultureIgnoreCase);
+
+                //避免meshname长度变化
+                if (uid.Length > oriUid.Length)
+                    uid = uid.Substring(0, oriUid.Length);
+                if (uid.Length < oriUid.Length)
+                    for (int i = uid.Length; i <= oriUid.Length - 1; i++)
+                        uid = uid + "_";
+
+                newitem.dataObjUid[0].uid = uid.ToUpper();
             }
+            
 
             chaTbl.addItem(newitem);
             //复制objdb
-            objdb.add(newitem);
-            logs.items.Add(new ItemLogBean(chaTbl.findItemByNo(no), newitem,isTextureReplace));
+            String newObjName = newitem.getObjsetName(allowTextureReplace);
+            objdb.add(newObjName,
+                      objdb.lastId + 1,
+                      newObjName + "_obj.bin",
+                      newObjName + "_tex.bin",
+                      newObjName + ".farc",
+                      newitem.dataObjUid[0].uid,
+                      0);
+
+            logs.items.Add(new ItemLogBean(chaTbl.findItemByNo(no), oriMeshNum, newitem,charactor, isTexReplaceAndCopyOri));
             return newitem;
         }
         public void copyCustomizeItemByObjId(int cstmItemNo,String name)
@@ -466,6 +520,7 @@ namespace Test
             cib.id = cstmItems.lastId + 1;
             cib.sort_index = cstmItems.lastSort_index + 1;
             cib.obj_id = findLastItemId()+1;
+            cib.name = cib.name + name;
             cstmItems.add(cib);
             logs.cstmItems.Add(new CSTMItemLogBean(cstmItems.findCstmItemByObjId(cstmItemNo), cib));
             for(int i = 0; i <= 9; i++)
@@ -560,40 +615,52 @@ namespace Test
             }
             return -1;
         }
-        public static int setMeshNameAndId(String path,String oldMeshName,String newMeshName)
+        public static int setMeshNameAndId(String path,String oldMeshName,int oldMeshId,String newMeshName)
         {
             byte[] bin = File.ReadAllBytes(path);
-            byte[] oldMeshNameByte = Encoding.ASCII.GetBytes(oldMeshName);
-            int idOffset = oldMeshNameByte.Length / 16 * 16 + 16;
+            byte[] oldMeshNameByte = Encoding.ASCII.GetBytes(oldMeshName.ToLower());
+            byte[] newMeshNameByte = Encoding.ASCII.GetBytes(newMeshName.ToLower());
             int index = IndexOf(bin, oldMeshNameByte);
-            byte[] firstPart = bin.Skip(0).Take(index).ToArray();
-            byte[] secondPart = bin.Skip(index + idOffset + 16).ToArray();
-            int id = bin[index + idOffset] + bin[index + idOffset + 1] * 256;
-            byte[] newMeshNameByte = Encoding.ASCII.GetBytes(newMeshName);
-            int newIdOffset = newMeshNameByte.Length / 16 * 16 + 16;
+            byte[] oldMeshIdByte = BitConverter.GetBytes(oldMeshId);
+            byte[] newMeshIdByte = BitConverter.GetBytes(0);
+            int idIndex = IndexOf(bin, oldMeshIdByte, index + oldMeshNameByte.Length);
 
-            //MeshName长度不能变化过大
-            if (idOffset != newIdOffset)
-            {
-                bin[index + idOffset] = 0;
-                bin[index + idOffset+1] = 0;
-                File.Delete(path);
-                File.WriteAllBytes(path, bin);
-                return -1;
-            }
+            for (int i = index; i <= index + oldMeshNameByte.Length-1; i++)
+                bin[i] = newMeshNameByte[i-index];
 
-            List<byte> final = new List<byte>();
-            final.AddRange(firstPart);
-            //set MeshName
-            final.AddRange(newMeshNameByte);
-            for (int i = newMeshNameByte.Length; i <= newIdOffset - 1; i++) final.Add(0);
-            //set ID
-            final.Add(0);
-            final.Add(0);
-            for (int i = 3; i <= 16; i++) final.Add(0);
-            final.AddRange(secondPart);
+            for (int i = idIndex; i <= idIndex + 1; i++)
+                bin[i] = newMeshIdByte[i - idIndex];
+            //int idOffset = oldMeshNameByte.Length / 16 * 16 + 16;
+            //byte[] firstPart = bin.Skip(0).Take(index).ToArray();
+            //byte[] secondPart = bin.Skip(index + idOffset + 16).ToArray();
+            //int id = bin[index + idOffset] + bin[index + idOffset + 1] * 256;
+            //byte[] newMeshNameByte = Encoding.ASCII.GetBytes(newMeshName);
+            //int newIdOffset = newMeshNameByte.Length / 16 * 16 + 16;
+
+            ////MeshName长度不能变化过大
+            //if (idOffset != newIdOffset)
+            //{
+            //    bin[index + idOffset] = 0;
+            //    bin[index + idOffset+1] = 0;
+            //    File.Delete(path);
+            //    File.WriteAllBytes(path, bin);
+            //    return -1;
+            //}
+
+            //List<byte> final = new List<byte>();
+            //final.AddRange(firstPart);
+            ////set MeshName
+            //final.AddRange(newMeshNameByte);
+            //for (int i = newMeshNameByte.Length; i <= newIdOffset - 1; i++) final.Add(0);
+            ////set ID
+            //final.Add(0);
+            //final.Add(0);
+            //for (int i = 3; i <= 16; i++) final.Add(0);
+            //final.AddRange(secondPart);
+            //File.Delete(path);
+            //File.WriteAllBytes(path, final.ToArray());
             File.Delete(path);
-            File.WriteAllBytes(path, final.ToArray());
+            File.WriteAllBytes(path, bin);
             return 0;
         }
     }
